@@ -15,23 +15,30 @@ interface Notification {
 }
 
 export default function SuperAdminNotifications() {
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Só mostrar para o super admin específico
-  if (!user || user.email !== 'admin@thiagoplatform.com') {
+  // Verificar se está montado no cliente
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Carregar notificações apenas se for super admin
+  useEffect(() => {
+    if (isMounted && isAuthenticated && user?.email === 'admin@thiagoplatform.com') {
+      loadNotifications();
+      const interval = setInterval(loadNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isMounted, isAuthenticated, user?.email]);
+
+  // Não renderizar nada se não estiver montado ou não for super admin
+  if (!isMounted || !isAuthenticated || !user || user.email !== 'admin@thiagoplatform.com') {
     return null;
   }
-
-  useEffect(() => {
-    loadNotifications();
-    
-    // Atualizar notificações a cada 30 segundos
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const loadNotifications = async () => {
     try {

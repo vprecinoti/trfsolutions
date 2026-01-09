@@ -1,6 +1,12 @@
 "use client";
 
-import SuperAdminNotifications from "@/components/SuperAdminNotifications";
+import dynamic from 'next/dynamic';
+
+// Carregar o componente de notificações apenas no cliente
+const SuperAdminNotifications = dynamic(
+  () => import("@/components/SuperAdminNotifications"),
+  { ssr: false }
+);
 
 export default function DashboardLayout({
   children,
