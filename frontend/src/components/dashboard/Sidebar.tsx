@@ -21,6 +21,7 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   roles?: string[];
+  superAdminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -35,6 +36,13 @@ const navItems: NavItem[] = [
     href: "/dashboard/clientes",
     icon: <Users className="w-5 h-5" />,
     roles: ["ADMIN", "PREMIUM"],
+  },
+  {
+    label: "Monitoramento",
+    href: "/dashboard/monitoramento",
+    icon: <Settings className="w-5 h-5" />,
+    roles: ["ADMIN"],
+    superAdminOnly: true,
   },
   {
     label: "Configurações",
@@ -123,9 +131,13 @@ export function Sidebar() {
   const visibleItems = useMemo(() => {
     return navItems.filter((item) => {
       if (!item.roles) return true;
-      return item.roles.includes(user?.role || "");
+      const hasRole = item.roles.includes(user?.role || "");
+      if (item.superAdminOnly) {
+        return hasRole && user?.email === 'admin@thiagoplatform.com';
+      }
+      return hasRole;
     });
-  }, [user?.role]);
+  }, [user?.role, user?.email]);
 
   const userInitial = useMemo(() => user?.name?.charAt(0).toUpperCase() || "U", [user?.name]);
   const roleLabel = useMemo(() => {
