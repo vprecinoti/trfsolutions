@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MODELOS DO BANCO DE DADOS
+// ============================================
+
+// Usuários do sistema (admin e usuários comuns)
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  role          UserRole @default(BASIC)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // Segurança: controle de tentativas de login
+  failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime? @map("locked_until")
+  
+  // Segurança: versão do token para invalidar sessões antigas
+  tokenVersion         Int       @default(0) @map("token_version")
+
+  // Relacionamento: cada usuário tem seus próprios leads/clientes
+  leads         Lead[]
+  
+  // Relacionamento: formulários em progresso (rascunhos)
+  formularios   Formulario[]
+  
+  // Relacionamento: refresh tokens
+  refreshTokens RefreshToken[]
+  
+  // Relacionamento: logs de login
+  loginLogs     LoginLog[]
+
+  @@map("users")
+}
+
+// Refresh tokens para renovação segura de sessão
+model RefreshToken {
+  id          String   @id @default(uuid())
+  token       String   @unique
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  // Info do dispositivo/navegador (opcional)
+  userAgent   String?  @map("user_agent")
+  ipAddress   String?  @map("ip_address")
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// Log de tentativas de login (sucesso e falha)
+model LoginLog {
+  id          String      @id @default(uuid())
+  email       String      // Email tentado (mesmo se não existir)
+  success     Boolean
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")
+  failReason  String?     @map("fail_reason") // "invalid_password", "user_not_found", "account_locked", etc
+  createdAt   DateTime    @default(now()) @map("created_at")
+  
+  // Relacionamento opcional (só se o usuário existir)
+  userId      String?     @map("user_id")
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("login_logs")
+}
+
+enum UserRole {
+  ADMIN
+  BASIC
+  PREMIUM
+}
+
+// Leads/Clientes que preencheram o formulário
+model Lead {
+  id            String      @id @default(uuid())
+  nome          String
+  email         String
+  telefone      String?
+  empresa       String?
+  cpf           String?
+  genero        String?
+  conjuge       String?
+  status        LeadStatus  @default(NOVO)
+  scoreFinal    Float?      @map("score_final")
+  resultadoJson Json?       @map("resultado_json") // Armazena o resultado completo
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  
+  // Relacionamento: cada lead pertence a um usuário (dono)
+  userId        String      @map("user_id")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relacionamento com respostas
+  responses     LeadResponse[]
+  
+  // Relacionamento inverso com formulário
+  formulario    Formulario?
+
+  @@index([userId]) // Index para buscar leads por usuário
+  @@map("leads")
+}
+
+enum LeadStatus {
+  NOVO
+  FORMULARIO_PREENCHIDO
+  PROPOSTA_ENVIADA
+  PROPOSTA_ACEITA
+  PAGAMENTO_PENDENTE
+  ATIVO
+  INATIVO
+  CANCELADO
+}
+
+// Respostas individuais do formulário
+model LeadResponse {
+  id            String   @id @default(uuid())
+  leadId        String   @map("lead_id")
+  perguntaKey   String   @map("pergunta_key") // Chave da pergunta (ex: "faturamento_atual")
+  respostaValor String   @map("resposta_valor") // Valor da resposta (pode ser JSON se necessário)
+  peso          Float?   // Peso usado no cálculo do score
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  // Relacionamento
+  lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_responses")
+}
+
+// ============================================
+// FORMULÁRIOS EM PROGRESSO (RASCUNHOS/SAVES)
+// ============================================
+
+// Formulário de objetivos financeiros (com auto-save)
+model Formulario {
+  id                  String           @id @default(uuid())
+  
+  // Dados do cliente sendo atendido
+  clienteNome         String?          @map("cliente_nome")
+  clienteEmail        String?          @map("cliente_email")
+  clienteTelefone     String?          @map("cliente_telefone")
+  
+  // Objetivos selecionados (array de IDs como JSON)
+  objetivosSelecionados Json?          @map("objetivos_selecionados")
+  
+  // Respostas de cada objetivo (JSON com estrutura: { objetivoId: { perguntaIndex: resposta } })
+  respostas           Json?
+  
+  // Progresso
+  stepAtual           Int              @default(0) @map("step_atual")
+  status              FormularioStatus @default(RASCUNHO)
+  progresso           Int              @default(0) // Porcentagem de conclusão (0-100)
+  
+  // Timestamps
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  completedAt         DateTime?        @map("completed_at")
+  
+  // Relacionamento: usuário que criou o formulário
+  userId              String           @map("user_id")
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relacionamento opcional: lead gerado após conclusão
+  leadId              String?          @unique @map("lead_id")
+  lead                Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@map("formularios")
+}
+
+enum FormularioStatus {
+  RASCUNHO    // Em progresso, não finalizado
+  COMPLETO    // Finalizado com sucesso
+  ABANDONADO  // Marcado como abandonado pelo usuário
+}

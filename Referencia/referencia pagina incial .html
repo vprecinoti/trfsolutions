@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard TRF - Premium Style</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-main: #06070a; 
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-bg-hover: rgba(255, 255, 255, 0.07);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-blue: #3A8DFF; /* Azul para "HOJE" e destaques */
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.5);
+            --border-radius-xl: 32px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: 
+                radial-gradient(circle at 10% 10%, rgba(58, 141, 255, 0.12), transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(58, 141, 255, 0.08), transparent 40%),
+                var(--bg-main);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 60px 40px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        /* Logo TRF - Grande e Separado */
+        .logo-container {
+            margin-bottom: 20px; /* Grande separação do Bem-vindo */
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .logo-trf {
+            height: 185px; /* Tamanho aumentado */
+            width: auto;
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
+        }
+
+        /* Header com Data à Direita */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end; /* Alinha a base da data com o texto */
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -2px;
+            line-height: 1.1;
+        }
+
+        /* Estilo da Data baseado na imagem enviada */
+        .date-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; /* Alinha tudo à direita */
+            margin-bottom: 8px;
+        }
+
+        .today-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .full-date {
+            font-size: 1.6rem; /* Tamanho maior para o dia */
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        /* Grade de Opções Estilo Glass */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius-xl);
+            padding: 40px;
+            text-decoration: none;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            position: relative;
+        }
+
+        .card:hover {
+            background: var(--glass-bg-hover);
+            transform: translateY(-8px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .card.main-card {
+            grid-column: span 2;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .icon-container {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 30px;
+        }
+
+        .main-card .icon-container svg {
+            fill: var(--accent-blue);
+            filter: drop-shadow(0 0 12px rgba(58, 141, 255, 0.4));
+        }
+
+        .secondary-card .icon-container {
+            margin-bottom: 25px;
+            justify-content: flex-start;
+        }
+        
+        .secondary-card .icon-container svg {
+            fill: #FFFFFF;
+            opacity: 0.9;
+        }
+
+        .card-content h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .card-content p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .arrow-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.4s ease;
+        }
+
+        .card:hover .arrow-icon {
+            background: var(--accent-blue);
+            transform: rotate(-45deg);
+        }
+
+        .secondary-card {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 40px 20px; }
+            .header { flex-direction: column; align-items: flex-start; }
+            .date-container { align-items: flex-start; margin-top: 20px; order: -1; }
+            h1 { font-size: 2.5rem; }
+            .logo-trf { height: 60px; }
+            .actions-grid { grid-template-columns: 1fr; }
+            .card.main-card { grid-column: span 1; flex-direction: column; align-items: flex-start; }
+            .arrow-icon { position: absolute; top: 40px; right: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <div class="logo-container">
+            <img src="https://waystdio.com/wp-content/uploads/2026/01/TRF-LOGO.png" alt="TRF Logo" class="logo-trf">
+        </div>
+
+        <header class="header">
+            <div>
+                <h1>Bem-vindo,<br>Administrador.</h1>
+            </div>
+            
+            <div class="date-container">
+                <span class="today-label">HOJE</span>
+                <span class="full-date">quinta-feira, 8 de janeiro</span>
+            </div>
+        </header>
+
+        <div class="actions-grid">
+            <a href="#" class="card main-card">
+                <div style="display: flex; align-items: center;">
+                    <div class="icon-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    </div>
+                    <div class="card-content">
+                        <h3>Base de Clientes</h3>
+                        <p>Gerenciar cadastros e portfólios.</p>
+                    </div>
+                </div>
+                <div class="arrow-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M6 6v2h8.59L5 17.59 6.41 19 16 9.41V18h2V6z"/></svg>
+                </div>
+            </a>
+
+            <a href="#" class="card secondary-card">
+                <div class="icon-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14h-3v3h-2v-3H8v-2h3v-3h2v3h3v2zm-3-7V3.5L18.5 9H13z"/></svg>
+                </div>
+                <div class="card-content">
+                    <h3>Novo Formulário</h3>
+                    <p>Iniciar questionário.</p>
+                </div>
+            </a>
+
+            <a href="#" class="card secondary-card">
+                <div class="icon-container">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+                </div>
+                <div class="card-content">
+                    <h3>Configurações</h3>
+                    <p>Ajustes do sistema.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>
