@@ -15,7 +15,6 @@ interface MenuBlock {
   icon: React.ReactNode;
   size: "large" | "small";
   roles?: UserRole[];
-  superAdminOnly?: boolean;
 }
 
 // --- Icons SVG ---
@@ -70,15 +69,6 @@ const menuBlocks: MenuBlock[] = [
     roles: ["ADMIN"],
   },
   {
-    title: "Super Admin",
-    subtitle: "Monitoramento do sistema.",
-    href: "/dashboard/super-admin",
-    icon: <SettingsIcon className="fill-red-400 opacity-90" />,
-    size: "small",
-    roles: ["ADMIN"],
-    superAdminOnly: true,
-  },
-  {
     title: "Minha Conta",
     subtitle: "Ajustes da conta.",
     href: "/dashboard/configuracoes/conta",
@@ -99,16 +89,7 @@ export default function DashboardPage() {
 
   const visibleBlocks = menuBlocks.filter((block) => {
     if (!block.roles) return true;
-    
-    // Verificar se tem a role necessária
-    const hasRole = block.roles.includes(user?.role || "BASIC");
-    
-    // Se é super admin only, verificar email específico
-    if (block.superAdminOnly) {
-      return hasRole && user?.email === 'admin@thiagoplatform.com';
-    }
-    
-    return hasRole;
+    return block.roles.includes(user?.role || "BASIC");
   });
 
   const largeBlock = visibleBlocks.find(b => b.size === "large");
