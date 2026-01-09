@@ -1,9 +1,8 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { CurrentUserData } from '../auth/decorators/current-user.decorator';
 import { AdminService } from './admin.service';
-import { ForbiddenException } from '@nestjs/common';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard)
