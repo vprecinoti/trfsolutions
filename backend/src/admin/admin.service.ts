@@ -1,36 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-
-interface SystemStats {
-  totalUsers: number;
-  totalClients: number;
-  totalFormularios: number;
-  totalLeads: number;
-  recentActivity: ActivityItem[];
-  systemAlerts: SystemAlert[];
-  databaseUsage: {
-    used: number;
-    total: number;
-    percentage: number;
-  };
-}
-
-interface ActivityItem {
-  id: string;
-  type: 'user_created' | 'client_created' | 'formulario_created' | 'login_success' | 'login_failed';
-  description: string;
-  timestamp: string;
-  userEmail?: string;
-}
-
-interface SystemAlert {
-  id: string;
-  type: 'warning' | 'error' | 'info';
-  title: string;
-  description: string;
-  timestamp: string;
-  resolved: boolean;
-}
+import type { SystemStats, ActivityItem, SystemAlert } from './admin.types';
 
 @Injectable()
 export class AdminService {
