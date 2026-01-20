@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { FormulariosModule } from './formularios/formularios.module';
 import { LeadsModule } from './leads/leads.module';
 import { AdminModule } from './admin/admin.module';
+import { ZapsignModule } from './zapsign/zapsign.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -24,6 +25,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     FormulariosModule,
     LeadsModule,
     AdminModule,
+    ZapsignModule,
   ],
   controllers: [AppController],
   providers: [

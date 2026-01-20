@@ -1440,7 +1440,7 @@ function FormularioNovoContent() {
         : undefined;
       
       // Completar formulário com dados do contrato - isso cria/atualiza o lead
-      await completeFormulario(formularioId, {
+      const formularioCompleto = await completeFormulario(formularioId, {
         cpf: dadosContrato.cpf,
         rg: dadosContrato.rg,
         endereco: dadosContrato.endereco,
@@ -1453,18 +1453,54 @@ function FormularioNovoContent() {
         valorContrato: valorNumerico,
         formaPagamento: dadosContrato.formaPagamento,
       });
+
+      // Gerar PDF do contrato em base64 para enviar ao ZapSign
+      const { pdf } = await import("@react-pdf/renderer");
+      const { ContratoPDF } = await import("@/lib/contract/ContratoPDF");
+      
+      const pdfBlob = await pdf(<ContratoPDF dados={dadosContrato} />).toBlob();
+      
+      // Converter blob para base64
+      const reader = new FileReader();
+      const pdfBase64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          // Remover o prefixo "data:application/pdf;base64,"
+          resolve(base64.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(pdfBlob);
+      });
+
+      // Enviar para ZapSign
+      const { sendContractToZapSign } = await import("@/lib/api/zapsign");
+      
+      const leadId = formularioCompleto.leadId || formularioCompleto.lead?.id;
+      
+      if (!leadId) {
+        throw new Error("Lead não encontrado após completar formulário");
+      }
+
+      await sendContractToZapSign({
+        leadId,
+        signerName: dadosContrato.nomeCompleto,
+        signerEmail: dadosContrato.email,
+        signerPhone: dadosContrato.celular?.replace(/\D/g, ''),
+        pdfBase64,
+        documentName: `Contrato de Consultoria - ${dadosContrato.nomeCompleto}`,
+      });
       
       // Fechar o modal
       setShowContratoModal(false);
       
       // Mostrar mensagem de sucesso
-      alert(`✅ Contrato gerado e enviado com sucesso para ${dadosContrato.email}\n\nCliente atualizado com status "Proposta Enviada"!`);
+      alert(`✅ Contrato enviado com sucesso!\n\nO cliente ${dadosContrato.nomeCompleto} receberá um email do ZapSign para assinar o contrato.\n\nEmail: ${dadosContrato.email}`);
       
       // Redirecionar para a página de clientes
       router.push("/dashboard/clientes");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao enviar contrato:", err);
-      alert("Erro ao enviar contrato. Tente novamente.");
+      alert(`Erro ao enviar contrato: ${err.response?.data?.message || err.message || 'Tente novamente.'}`);
     }
   };
 
