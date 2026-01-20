@@ -99,8 +99,26 @@ model Lead {
   telefone      String?
   empresa       String?
   cpf           String?
+  rg            String?
   genero        String?
+  estadoCivil   String?     @map("estado_civil")
+  profissao     String?
   conjuge       String?
+  
+  // Endereço
+  endereco      String?
+  bairro        String?
+  cep           String?
+  cidade        String?
+  estado        String?
+  
+  // Dados do contrato
+  valorContrato Float?      @map("valor_contrato")
+  formaPagamento String?    @map("forma_pagamento")
+  statusContrato String?    @map("status_contrato") // "pendente", "enviado", "assinado"
+  contratoEnviadoEm DateTime? @map("contrato_enviado_em")
+  contratoAssinadoEm DateTime? @map("contrato_assinado_em")
+  
   status        LeadStatus  @default(NOVO)
   scoreFinal    Float?      @map("score_final")
   resultadoJson Json?       @map("resultado_json") // Armazena o resultado completo

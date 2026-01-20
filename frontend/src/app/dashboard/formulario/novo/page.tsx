@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, X, Save, Loader2, Calendar, DollarSign, Briefcase, ChevronDown, ChevronRight, User, Building2, Laptop, Stethoscope, StickyNote, Target, Landmark, Shield, Palmtree, PieChart, Home, Car, Plane, Users, CreditCard, Sparkles, Plus, TrendingUp, TrendingDown, Trash2, Tag, Wallet, Heart, Baby, Dog, UserPlus, Banknote, Receipt, ShoppingCart, Pencil } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X, Save, Loader2, Calendar, DollarSign, Briefcase, ChevronDown, ChevronRight, User, Building2, Laptop, Stethoscope, StickyNote, Target, Landmark, Shield, Palmtree, PieChart, Home, Car, Plane, Users, CreditCard, Sparkles, Plus, TrendingUp, TrendingDown, Trash2, Tag, Wallet, Heart, Baby, Dog, UserPlus, Banknote, Receipt, ShoppingCart, Pencil, FileText } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
   getFormulario, 
@@ -10,6 +10,8 @@ import {
   completeFormulario,
   Formulario 
 } from "@/lib/api/formularios";
+import { ContratoModal } from "@/components/contract/ContratoModal";
+import type { DadosContrato } from "@/components/contract/ContratoModal";
 
 // Tipos
 interface Objetivo {
@@ -843,6 +845,7 @@ function FormularioNovoContent() {
   const [emailContrato, setEmailContrato] = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [planoAcompanhamento, setPlanoAcompanhamento] = useState<"standard" | "premium" | "infinity" | "nenhum">("standard");
+  const [showContratoModal, setShowContratoModal] = useState(false);
 
   // Carregar formulário existente
   useEffect(() => {
@@ -1411,6 +1414,43 @@ function FormularioNovoContent() {
     }
   };
 
+  // Abre o modal de contrato para preencher os dados
+  const abrirModalContrato = () => {
+    setShowContratoModal(true);
+  };
+
+  // Função chamada quando o contrato é enviado pelo modal
+  const handleEnviarContrato = async (dadosContrato: DadosContrato) => {
+    if (!formularioId) {
+      alert("Erro: ID do formulário não encontrado");
+      return;
+    }
+
+    try {
+      // Primeiro salva os dados do cliente
+      await updateFormulario(formularioId, {
+        clienteNome: dadosContrato.nomeCompleto,
+        clienteEmail: dadosContrato.email,
+        clienteTelefone: dadosContrato.celular || undefined,
+      });
+      
+      // Completar formulário - isso já cria o lead/cliente automaticamente
+      await completeFormulario(formularioId);
+      
+      // Fechar o modal
+      setShowContratoModal(false);
+      
+      // Mostrar mensagem de sucesso
+      alert(`✅ Contrato gerado e enviado com sucesso para ${dadosContrato.email}\n\nCliente cadastrado na aba de Clientes!`);
+      
+      // Redirecionar para a página de clientes
+      router.push("/dashboard/clientes");
+    } catch (err) {
+      console.error("Erro ao enviar contrato:", err);
+      alert("Erro ao enviar contrato. Tente novamente.");
+    }
+  };
+
   const enviarContrato = async () => {
     if (!emailContrato) {
       alert("Preencha o email para envio do contrato");
@@ -1455,6 +1495,7 @@ function FormularioNovoContent() {
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -4963,30 +5004,16 @@ function FormularioNovoContent() {
                 <div className="border-t border-slate-700/50 pt-8">
                   <h3 className="text-2xl font-bold text-white mb-6 text-center">DECIDA REALIZAR</h3>
                   <div className="max-w-md mx-auto space-y-4">
-                    <div>
-                      <label className="block text-sm text-slate-400 mb-2">E-mail para envio:</label>
-                      <input
-                        type="email"
-                        value={emailContrato}
-                        onChange={(e) => setEmailContrato(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-500"
-                        placeholder="email@exemplo.com"
-                      />
-                    </div>
+                    <p className="text-center text-slate-400 text-sm mb-4">
+                      Clique no botão abaixo para preencher os dados do contrato e gerar o PDF
+                    </p>
                     <button
-                      onClick={enviarContrato}
-                      disabled={enviandoContrato || !emailContrato}
-                      className="w-full py-4 bg-[#3A8DFF] hover:bg-[#3A8DFF] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-semibold transition-colors"
+                      onClick={abrirModalContrato}
+                      className="w-full py-4 bg-[#3A8DFF] hover:bg-[#3A8DFF]/80 rounded-xl text-white font-semibold transition-colors flex items-center justify-center gap-2"
                     >
-                      {enviandoContrato ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
-                          Enviando...
-                  </>
-                ) : (
-                        "Confirmar e-mail e enviar contrato"
-                )}
-              </button>
+                      <FileText className="w-5 h-5" />
+                      Gerar Contrato e Enviar
+                    </button>
                   </div>
                 </div>
               </div>
@@ -4994,6 +5021,22 @@ function FormularioNovoContent() {
             </div>
           </div>
         )}
+
+      {/* Modal de Contrato */}
+      <ContratoModal
+        isOpen={showContratoModal}
+        onClose={() => setShowContratoModal(false)}
+        onEnviar={handleEnviarContrato}
+        dadosIniciais={{
+          nome: dadosCliente.nome,
+          email: dadosCliente.email,
+          telefone: dadosCliente.telefone,
+          cpf: undefined, // Será preenchido no modal
+          profissao: situacaoProfissional.profissao,
+          estadoCivil: infoFamiliar.estadoCivil,
+          valorConsultoria: precoAvistaComDesconto,
+        }}
+      />
 
       {/* Modal de Notas */}
       {showNotasModal && (

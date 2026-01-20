@@ -79,13 +79,13 @@ export default function FormularioPage() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8 lg:items-start">
           {/* Card para iniciar formulário */}
-          <div className="bg-white/[0.03] backdrop-blur-xl rounded-[24px] md:rounded-[32px] border border-white/[0.08] p-6 md:p-10 flex flex-col">
-            <div className="w-[50px] h-[50px] md:w-[60px] md:h-[60px] bg-[#3A8DFF]/20 rounded-2xl flex items-center justify-center mb-4 md:mb-6">
+          <div className="bg-white/[0.03] backdrop-blur-xl rounded-[24px] md:rounded-[32px] border border-white/[0.08] p-6 md:p-8 flex flex-col h-fit">
+            <div className="w-[50px] h-[50px] md:w-[60px] md:h-[60px] bg-[#3A8DFF]/20 rounded-2xl flex items-center justify-center mb-4">
               <FileText className="w-7 h-7 md:w-8 md:h-8 text-[#3A8DFF]" />
             </div>
-            <h2 className="text-xl md:text-2xl font-semibold text-white mb-6 md:mb-8">Questionário de Avaliação</h2>
+            <h2 className="text-xl md:text-2xl font-semibold text-white mb-4">Questionário de Avaliação</h2>
             
             <button onClick={handleNovoFormulario}
               className="py-3 px-6 bg-[#3A8DFF] text-white rounded-xl font-semibold hover:bg-[#3A8DFF]/80 transition-all flex items-center justify-center gap-3 w-fit">

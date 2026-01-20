@@ -7,8 +7,19 @@ interface CreateLeadData {
   telefone?: string;
   empresa?: string;
   cpf?: string;
+  rg?: string;
   genero?: string;
+  estadoCivil?: string;
+  profissao?: string;
   conjuge?: string;
+  endereco?: string;
+  bairro?: string;
+  cep?: string;
+  cidade?: string;
+  estado?: string;
+  valorContrato?: number;
+  formaPagamento?: string;
+  statusContrato?: string;
 }
 
 interface UpdateLeadData {
@@ -17,8 +28,20 @@ interface UpdateLeadData {
   telefone?: string;
   empresa?: string;
   cpf?: string;
+  rg?: string;
   genero?: string;
+  estadoCivil?: string;
+  profissao?: string;
   conjuge?: string;
+  endereco?: string;
+  bairro?: string;
+  cep?: string;
+  cidade?: string;
+  estado?: string;
+  status?: string;
+  valorContrato?: number;
+  formaPagamento?: string;
+  statusContrato?: string;
 }
 
 @Injectable()

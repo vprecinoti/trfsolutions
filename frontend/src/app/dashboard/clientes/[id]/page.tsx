@@ -363,14 +363,15 @@ export default function ClienteDetalhesPage() {
         <div className="space-y-6">
           {/* Tab: Informações de Contato */}
           {activeTab === "info" && (
-            <div className="bg-white/[0.03] backdrop-blur-xl rounded-[24px] border border-white/[0.08] p-6">
-              <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                <User className="w-5 h-5 text-[#3A8DFF]" />
-                Informações de Contato
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Dados Pessoais */}
+              <div className="bg-white/[0.03] backdrop-blur-xl rounded-[24px] border border-white/[0.08] p-6">
+                <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                  <User className="w-5 h-5 text-[#3A8DFF]" />
+                  Dados Pessoais
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Nome Completo</label>
                     <p className="text-white mt-1">{lead.nome}</p>
@@ -382,17 +383,30 @@ export default function ClienteDetalhesPage() {
                   </div>
                   
                   <div>
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">RG</label>
+                    <p className="text-white mt-1">{lead.rg || "---"}</p>
+                  </div>
+                  
+                  <div>
                     <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Gênero</label>
                     <p className="text-white mt-1">{getGeneroLabel(lead.genero)}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Estado Civil</label>
+                    <p className="text-white mt-1">{lead.estadoCivil || "---"}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Profissão</label>
+                    <p className="text-white mt-1">{lead.profissao || "---"}</p>
                   </div>
                   
                   <div>
                     <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Cônjuge</label>
                     <p className="text-white mt-1">{lead.conjuge || "---"}</p>
                   </div>
-                </div>
-                
-                <div className="space-y-4">
+                  
                   <div>
                     <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Status</label>
                     <p className="mt-1">
@@ -401,7 +415,55 @@ export default function ClienteDetalhesPage() {
                       </span>
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Endereço */}
+              <div className="bg-white/[0.03] backdrop-blur-xl rounded-[24px] border border-white/[0.08] p-6">
+                <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-[#3A8DFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Endereço
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Endereço</label>
+                    <p className="text-white mt-1">{lead.endereco || "---"}</p>
+                  </div>
                   
+                  <div>
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Bairro</label>
+                    <p className="text-white mt-1">{lead.bairro || "---"}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">CEP</label>
+                    <p className="text-white mt-1">{lead.cep || "---"}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Cidade</label>
+                    <p className="text-white mt-1">{lead.cidade || "---"}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Estado</label>
+                    <p className="text-white mt-1">{lead.estado || "---"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contato */}
+              <div className="bg-white/[0.03] backdrop-blur-xl rounded-[24px] border border-white/[0.08] p-6">
+                <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-[#3A8DFF]" />
+                  Contato
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Email</label>
                     <p className="text-white mt-1">{lead.email}</p>
@@ -417,12 +479,12 @@ export default function ClienteDetalhesPage() {
                     <p className="text-white mt-1">{lead.empresa || "---"}</p>
                   </div>
                 </div>
-              </div>
-              
-              <div className="mt-6 pt-6 border-t border-white/[0.08]">
-                <div className="flex items-center gap-2 text-sm text-white/50">
-                  <Calendar className="w-4 h-4" />
-                  <span>Cadastrado em {formatDate(lead.createdAt)}</span>
+                
+                <div className="mt-6 pt-6 border-t border-white/[0.08]">
+                  <div className="flex items-center gap-2 text-sm text-white/50">
+                    <Calendar className="w-4 h-4" />
+                    <span>Cadastrado em {formatDate(lead.createdAt)}</span>
+                  </div>
                 </div>
               </div>
             </div>

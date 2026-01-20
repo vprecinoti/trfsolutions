@@ -1,0 +1,14 @@
+-- AlterTable: Adicionar campos de contrato ao Lead
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "rg" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "estado_civil" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "profissao" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "endereco" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "bairro" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "cep" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "cidade" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "estado" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "valor_contrato" DOUBLE PRECISION;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "forma_pagamento" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "status_contrato" TEXT;
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "contrato_enviado_em" TIMESTAMP(3);
+ALTER TABLE "leads" ADD COLUMN IF NOT EXISTS "contrato_assinado_em" TIMESTAMP(3);
