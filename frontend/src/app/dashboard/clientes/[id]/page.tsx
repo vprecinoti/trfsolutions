@@ -7,7 +7,7 @@ import {
   ArrowLeft, User, Mail, Phone, FileText, Calendar,
   Edit2, Trash2, Loader2, MessageSquare, ClipboardList, 
   History, CheckCircle, XCircle,
-  Plus, Save, Eye
+  Plus, Save, Eye, X, Download
 } from "lucide-react";
 import Link from "next/link";
 import { getLead, deleteLead, updateLeadStatus, Lead } from "@/lib/api/leads";
@@ -26,6 +26,11 @@ export default function ClienteDetalhesPage() {
   const [feedback, setFeedback] = useState("");
   const [savingFeedback, setSavingFeedback] = useState(false);
   const [userRole, setUserRole] = useState<string>("Usuário");
+  
+  // Estados para visualização do contrato
+  const [showContratoModal, setShowContratoModal] = useState(false);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (clienteId) {
@@ -98,6 +103,133 @@ export default function ClienteDetalhesPage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSavingFeedback(false);
     alert("Feedback salvo com sucesso!");
+  };
+
+  // Função para converter número em extenso
+  const numeroParaExtenso = (valor: number): string => {
+    const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+    const especiais = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+    const dezenas = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+    const centenas = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+
+    if (valor === 0) return "zero reais";
+    if (valor === 100) return "cem reais";
+
+    const partes: string[] = [];
+    const milhares = Math.floor(valor / 1000);
+    
+    if (milhares > 0) {
+      if (milhares === 1) {
+        partes.push("mil");
+      } else if (milhares < 10) {
+        partes.push(unidades[milhares] + " mil");
+      } else if (milhares < 20) {
+        partes.push(especiais[milhares - 10] + " mil");
+      } else {
+        const dezMil = Math.floor(milhares / 10);
+        const uniMil = milhares % 10;
+        if (uniMil === 0) {
+          partes.push(dezenas[dezMil] + " mil");
+        } else {
+          partes.push(dezenas[dezMil] + " e " + unidades[uniMil] + " mil");
+        }
+      }
+    }
+
+    const resto = valor % 1000;
+    const cent = Math.floor(resto / 100);
+    const dez = Math.floor((resto % 100) / 10);
+    const uni = resto % 10;
+
+    if (cent > 0) {
+      if (resto === 100) {
+        partes.push("cem");
+      } else {
+        partes.push(centenas[cent]);
+      }
+    }
+
+    if (dez === 1) {
+      partes.push(especiais[uni]);
+    } else {
+      if (dez > 1) partes.push(dezenas[dez]);
+      if (uni > 0) partes.push(unidades[uni]);
+    }
+
+    return partes.join(" e ") + " reais";
+  };
+
+  // Função para visualizar o contrato
+  const handleVisualizarContrato = async () => {
+    if (!lead) return;
+    
+    try {
+      setGerandoPdf(true);
+      setShowContratoModal(true);
+      
+      // Import dinâmico para evitar problemas de SSR
+      const { pdf } = await import("@react-pdf/renderer");
+      const { ContratoPDF } = await import("@/lib/contract/ContratoPDF");
+      
+      // Montar dados do contrato a partir do lead
+      const dadosContrato = {
+        nomeCompleto: lead.nome,
+        endereco: lead.endereco || "",
+        bairro: lead.bairro || "",
+        cep: lead.cep || "",
+        cidade: lead.cidade || "",
+        estado: lead.estado || "",
+        telefoneFixo: "",
+        celular: lead.telefone || "",
+        email: lead.email,
+        rg: lead.rg || "",
+        cpf: lead.cpf || "",
+        estadoCivil: lead.estadoCivil || "",
+        profissao: lead.profissao || "",
+        valorAP: lead.valorContrato 
+          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lead.valorContrato)
+          : "",
+        valorAPExtenso: lead.valorContrato ? numeroParaExtenso(Math.round(lead.valorContrato)) : "",
+        formaPagamento: (lead.formaPagamento as "pix" | "cartao") || "pix",
+        numeroParcelas: "",
+        vencimentoAP: "",
+        numeroConta: "12345-6",
+        numeroAgencia: "0001",
+        nomeBanco: "Itaú Unibanco",
+      };
+      
+      const blob = await pdf(<ContratoPDF dados={dadosContrato} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(url);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Erro ao gerar o PDF do contrato. Tente novamente.");
+      setShowContratoModal(false);
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
+
+  // Função para baixar o PDF
+  const handleBaixarPdf = () => {
+    if (!pdfUrl || !lead) return;
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    link.download = `contrato_${lead.nome.replace(/\s+/g, "_")}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Limpar URL do PDF ao fechar modal
+  const handleFecharModal = () => {
+    setShowContratoModal(false);
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -564,12 +696,19 @@ export default function ClienteDetalhesPage() {
 
                   {/* Ações */}
                   <div className="flex gap-3 pt-4 border-t border-white/[0.08]">
-                    <button className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl text-sm text-white/70 hover:bg-white/[0.1] hover:text-white transition-all">
+                    <button 
+                      onClick={handleVisualizarContrato}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl text-sm text-white/70 hover:bg-white/[0.1] hover:text-white transition-all"
+                    >
                       <Eye className="w-4 h-4" />
                       Visualizar Contrato
                     </button>
                     {lead.statusContrato !== 'assinado' && (
-                      <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#3A8DFF] text-white rounded-xl text-sm font-medium hover:bg-[#3A8DFF]/80 transition-colors">
+                      <button 
+                        disabled
+                        title="Será habilitado após integração com plataforma de assinatura"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#3A8DFF]/50 text-white/70 rounded-xl text-sm font-medium cursor-not-allowed"
+                      >
                         <Mail className="w-4 h-4" />
                         Reenviar Contrato
                       </button>
@@ -728,6 +867,69 @@ export default function ClienteDetalhesPage() {
           )}
         </div>
       </div>
+
+      {/* Modal de Visualização do Contrato */}
+      {showContratoModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Header do Modal */}
+            <div className="p-6 border-b border-slate-700 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#3A8DFF]/20 rounded-xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-[#3A8DFF]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Contrato - {lead?.nome}</h3>
+                  <p className="text-sm text-slate-400">Visualização do contrato gerado</p>
+                </div>
+              </div>
+              <button onClick={handleFecharModal} className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="flex-1 overflow-hidden p-6">
+              {gerandoPdf ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="w-10 h-10 text-[#3A8DFF] animate-spin mx-auto mb-4" />
+                    <p className="text-slate-400">Gerando PDF do contrato...</p>
+                  </div>
+                </div>
+              ) : pdfUrl ? (
+                <iframe 
+                  src={pdfUrl} 
+                  className="w-full h-[60vh] rounded-lg border border-slate-700" 
+                  title="Visualização do Contrato" 
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-slate-400">Erro ao carregar o contrato</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer do Modal */}
+            <div className="p-6 border-t border-slate-700 flex justify-end gap-3 shrink-0">
+              <button 
+                onClick={handleFecharModal}
+                className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors text-white"
+              >
+                Fechar
+              </button>
+              <button 
+                onClick={handleBaixarPdf}
+                disabled={!pdfUrl}
+                className="px-5 py-2.5 rounded-xl bg-[#3A8DFF] hover:bg-[#3A8DFF]/80 transition-colors text-white font-medium flex items-center gap-2 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                Baixar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
