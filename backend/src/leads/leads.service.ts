@@ -38,7 +38,7 @@ interface UpdateLeadData {
   cep?: string;
   cidade?: string;
   estado?: string;
-  status?: string;
+  status?: 'NOVO' | 'FORMULARIO_PREENCHIDO' | 'PROPOSTA_ENVIADA' | 'PROPOSTA_ACEITA' | 'PAGAMENTO_PENDENTE' | 'ATIVO' | 'INATIVO' | 'CANCELADO';
   valorContrato?: number;
   formaPagamento?: string;
   statusContrato?: string;
