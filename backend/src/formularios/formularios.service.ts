@@ -95,28 +95,87 @@ export class FormulariosService {
     });
   }
 
-  // Completar formulário e criar lead
-  async complete(id: string, userId: string) {
+  // Completar formulário e criar/atualizar lead
+  async complete(id: string, userId: string, dadosContrato?: {
+    cpf?: string;
+    rg?: string;
+    endereco?: string;
+    bairro?: string;
+    cep?: string;
+    cidade?: string;
+    estado?: string;
+    estadoCivil?: string;
+    profissao?: string;
+    valorContrato?: number;
+    formaPagamento?: string;
+  }) {
     const formulario = await this.findOne(id, userId);
 
     if (!formulario.clienteNome || !formulario.clienteEmail) {
       throw new ForbiddenException('Preencha os dados do cliente para finalizar');
     }
 
-    // Criar lead a partir do formulário
-    const lead = await this.prisma.lead.create({
-      data: {
-        userId,
-        nome: formulario.clienteNome,
-        email: formulario.clienteEmail,
-        telefone: formulario.clienteTelefone,
-        status: 'FORMULARIO_PREENCHIDO', // Status automático quando formulário é concluído
-        resultadoJson: {
-          objetivos: formulario.objetivosSelecionados,
-          respostas: formulario.respostas,
+    let lead;
+
+    // Se já existe um lead vinculado, atualiza ao invés de criar
+    if (formulario.leadId) {
+      lead = await this.prisma.lead.update({
+        where: { id: formulario.leadId },
+        data: {
+          nome: formulario.clienteNome,
+          email: formulario.clienteEmail,
+          telefone: formulario.clienteTelefone,
+          // Dados do contrato
+          cpf: dadosContrato?.cpf,
+          rg: dadosContrato?.rg,
+          endereco: dadosContrato?.endereco,
+          bairro: dadosContrato?.bairro,
+          cep: dadosContrato?.cep,
+          cidade: dadosContrato?.cidade,
+          estado: dadosContrato?.estado,
+          estadoCivil: dadosContrato?.estadoCivil,
+          profissao: dadosContrato?.profissao,
+          valorContrato: dadosContrato?.valorContrato,
+          formaPagamento: dadosContrato?.formaPagamento,
+          statusContrato: 'enviado',
+          contratoEnviadoEm: new Date(),
+          status: 'PROPOSTA_ENVIADA',
+          resultadoJson: {
+            objetivos: formulario.objetivosSelecionados,
+            respostas: formulario.respostas,
+          },
         },
-      },
-    });
+      });
+    } else {
+      // Criar novo lead a partir do formulário
+      lead = await this.prisma.lead.create({
+        data: {
+          userId,
+          nome: formulario.clienteNome,
+          email: formulario.clienteEmail,
+          telefone: formulario.clienteTelefone,
+          // Dados do contrato
+          cpf: dadosContrato?.cpf,
+          rg: dadosContrato?.rg,
+          endereco: dadosContrato?.endereco,
+          bairro: dadosContrato?.bairro,
+          cep: dadosContrato?.cep,
+          cidade: dadosContrato?.cidade,
+          estado: dadosContrato?.estado,
+          estadoCivil: dadosContrato?.estadoCivil,
+          profissao: dadosContrato?.profissao,
+          valorContrato: dadosContrato?.valorContrato,
+          formaPagamento: dadosContrato?.formaPagamento,
+          statusContrato: dadosContrato ? 'enviado' : 'pendente',
+          contratoEnviadoEm: dadosContrato ? new Date() : undefined,
+          status: dadosContrato ? 'PROPOSTA_ENVIADA' : 'FORMULARIO_PREENCHIDO',
+          resultadoJson: {
+            objetivos: formulario.objetivosSelecionados,
+            respostas: formulario.respostas,
+          },
+        },
+      });
+    }
 
     // Atualizar formulário como completo e vincular ao lead
     const formularioAtualizado = await this.prisma.formulario.update({

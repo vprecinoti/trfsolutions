@@ -67,8 +67,20 @@ export async function updateFormulario(id: string, data: UpdateFormularioDto): P
 }
 
 // Completar formulário
-export async function completeFormulario(id: string): Promise<Formulario> {
-  const response = await api.post<Formulario>(`/formularios/${id}/complete`);
+export async function completeFormulario(id: string, dadosContrato?: {
+  cpf?: string;
+  rg?: string;
+  endereco?: string;
+  bairro?: string;
+  cep?: string;
+  cidade?: string;
+  estado?: string;
+  estadoCivil?: string;
+  profissao?: string;
+  valorContrato?: number;
+  formaPagamento?: string;
+}): Promise<Formulario> {
+  const response = await api.post<Formulario>(`/formularios/${id}/complete`, dadosContrato || {});
   return response.data;
 }
 

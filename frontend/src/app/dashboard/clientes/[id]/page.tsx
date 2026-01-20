@@ -498,17 +498,97 @@ export default function ClienteDetalhesPage() {
                 Contrato
               </h2>
               
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-white/[0.05] rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-8 h-8 text-white/30" />
+              {lead.statusContrato ? (
+                <div className="space-y-6">
+                  {/* Status do Contrato */}
+                  <div className="flex items-center gap-4 p-4 bg-white/[0.03] rounded-xl border border-white/[0.08]">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      lead.statusContrato === 'assinado' 
+                        ? 'bg-emerald-500/20' 
+                        : lead.statusContrato === 'enviado' 
+                          ? 'bg-amber-500/20' 
+                          : 'bg-white/[0.05]'
+                    }`}>
+                      <FileText className={`w-6 h-6 ${
+                        lead.statusContrato === 'assinado' 
+                          ? 'text-emerald-400' 
+                          : lead.statusContrato === 'enviado' 
+                            ? 'text-amber-400' 
+                            : 'text-white/40'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white">
+                        {lead.statusContrato === 'assinado' ? 'Contrato Assinado' : 
+                         lead.statusContrato === 'enviado' ? 'Contrato Enviado' : 
+                         'Contrato Pendente'}
+                      </h3>
+                      <p className="text-sm text-white/50">
+                        {lead.contratoEnviadoEm && `Enviado em ${formatDate(lead.contratoEnviadoEm)}`}
+                        {lead.contratoAssinadoEm && ` • Assinado em ${formatDate(lead.contratoAssinadoEm)}`}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      lead.statusContrato === 'assinado' 
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                        : lead.statusContrato === 'enviado' 
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
+                          : 'bg-white/10 text-white/60 border border-white/20'
+                    }`}>
+                      {lead.statusContrato === 'assinado' ? 'Assinado' : 
+                       lead.statusContrato === 'enviado' ? 'Aguardando Assinatura' : 
+                       'Pendente'}
+                    </span>
+                  </div>
+
+                  {/* Dados do Contrato */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Valor do Contrato</label>
+                      <p className="text-white mt-1 text-lg font-semibold">
+                        {lead.valorContrato 
+                          ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.valorContrato)
+                          : '---'}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Forma de Pagamento</label>
+                      <p className="text-white mt-1">
+                        {lead.formaPagamento === 'pix' ? 'PIX / Transferência' : 
+                         lead.formaPagamento === 'cartao' ? 'Cartão de Crédito' : 
+                         lead.formaPagamento || '---'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex gap-3 pt-4 border-t border-white/[0.08]">
+                    <button className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.05] border border-white/[0.08] rounded-xl text-sm text-white/70 hover:bg-white/[0.1] hover:text-white transition-all">
+                      <Eye className="w-4 h-4" />
+                      Visualizar Contrato
+                    </button>
+                    {lead.statusContrato !== 'assinado' && (
+                      <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#3A8DFF] text-white rounded-xl text-sm font-medium hover:bg-[#3A8DFF]/80 transition-colors">
+                        <Mail className="w-4 h-4" />
+                        Reenviar Contrato
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <h3 className="text-lg font-medium text-white mb-2">Nenhum contrato cadastrado</h3>
-                <p className="text-white/50 mb-6">Adicione informações do contrato deste cliente</p>
-                <button className="inline-flex items-center gap-2 px-5 py-3 bg-[#3A8DFF] text-white rounded-xl font-medium hover:bg-[#3A8DFF]/80 transition-colors">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Contrato
-                </button>
-              </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-white/[0.05] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-white/30" />
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">Nenhum contrato cadastrado</h3>
+                  <p className="text-white/50 mb-6">Adicione informações do contrato deste cliente</p>
+                  <button className="inline-flex items-center gap-2 px-5 py-3 bg-[#3A8DFF] text-white rounded-xl font-medium hover:bg-[#3A8DFF]/80 transition-colors">
+                    <Plus className="w-4 h-4" />
+                    Adicionar Contrato
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

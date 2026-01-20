@@ -69,8 +69,21 @@ export class FormulariosController {
   complete(
     @CurrentUser() user: CurrentUserData,
     @Param('id') id: string,
+    @Body() dadosContrato?: {
+      cpf?: string;
+      rg?: string;
+      endereco?: string;
+      bairro?: string;
+      cep?: string;
+      cidade?: string;
+      estado?: string;
+      estadoCivil?: string;
+      profissao?: string;
+      valorContrato?: number;
+      formaPagamento?: string;
+    },
   ) {
-    return this.formulariosService.complete(id, user.id);
+    return this.formulariosService.complete(id, user.id, dadosContrato);
   }
 
   // DELETE /formularios/:id - Excluir formulário

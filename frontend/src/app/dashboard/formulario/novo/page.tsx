@@ -1434,14 +1434,31 @@ function FormularioNovoContent() {
         clienteTelefone: dadosContrato.celular || undefined,
       });
       
-      // Completar formulário - isso já cria o lead/cliente automaticamente
-      await completeFormulario(formularioId);
+      // Extrair valor numérico do valorAP (remove formatação de moeda)
+      const valorNumerico = dadosContrato.valorAP 
+        ? parseFloat(dadosContrato.valorAP.replace(/[^\d,]/g, '').replace(',', '.')) 
+        : undefined;
+      
+      // Completar formulário com dados do contrato - isso cria/atualiza o lead
+      await completeFormulario(formularioId, {
+        cpf: dadosContrato.cpf,
+        rg: dadosContrato.rg,
+        endereco: dadosContrato.endereco,
+        bairro: dadosContrato.bairro,
+        cep: dadosContrato.cep,
+        cidade: dadosContrato.cidade,
+        estado: dadosContrato.estado,
+        estadoCivil: dadosContrato.estadoCivil,
+        profissao: dadosContrato.profissao,
+        valorContrato: valorNumerico,
+        formaPagamento: dadosContrato.formaPagamento,
+      });
       
       // Fechar o modal
       setShowContratoModal(false);
       
       // Mostrar mensagem de sucesso
-      alert(`✅ Contrato gerado e enviado com sucesso para ${dadosContrato.email}\n\nCliente cadastrado na aba de Clientes!`);
+      alert(`✅ Contrato gerado e enviado com sucesso para ${dadosContrato.email}\n\nCliente atualizado com status "Proposta Enviada"!`);
       
       // Redirecionar para a página de clientes
       router.push("/dashboard/clientes");
