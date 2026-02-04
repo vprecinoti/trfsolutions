@@ -192,7 +192,7 @@ export default function RegisterPage() {
             {/* Logo TRF */}
             <div className="mb-8">
               <Image 
-                src="https://waystdio.com/wp-content/uploads/2026/01/TRF-LOGO.png" 
+                src="/trf-logo.png" 
                 alt="TRF Logo" 
                 width={120}
                 height={52}

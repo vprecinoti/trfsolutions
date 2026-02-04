@@ -152,7 +152,7 @@ export function Sidebar() {
       <div className={`p-6 ${isCollapsed ? "flex justify-center" : ""}`}>
         <Link href="/dashboard" className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
           <Image
-            src="https://waystdio.com/wp-content/uploads/2026/01/TRF-LOGO.png"
+            src="/trf-logo.png"
             alt="TRF Logo"
             width={isCollapsed ? 40 : 110}
             height={isCollapsed ? 40 : 110}
@@ -219,7 +219,7 @@ export function Sidebar() {
       <div className="p-6">
         <Link href="/dashboard" className="flex items-center gap-3">
           <Image
-            src="https://waystdio.com/wp-content/uploads/2026/01/TRF-LOGO.png"
+            src="/trf-logo.png"
             alt="TRF Logo"
             width={110}
             height={110}

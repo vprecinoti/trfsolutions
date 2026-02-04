@@ -120,7 +120,7 @@ export default function DashboardPage() {
         {/* Logo */}
         <div className="mb-3 flex justify-start">
           <Image
-            src="https://waystdio.com/wp-content/uploads/2026/01/TRF-LOGO.png"
+            src="/trf-logo.png"
             alt="TRF Logo"
             width={185}
             height={185}
