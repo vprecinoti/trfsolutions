@@ -44,13 +44,15 @@ export class ReunioesService {
       },
     });
 
-    // Enviar email de lembrete se tem cliente vinculado com email
+    // Enviar email de reunião agendada se tem cliente vinculado
     if (reuniao.lead?.email) {
-      this.emailService.enviarLembreteReuniao(
+      this.emailService.enviarReuniaoAgendada(
         reuniao.lead.email,
         reuniao.lead.nome,
         reuniao.dataHora,
         reuniao.titulo,
+        reuniao.duracao,
+        reuniao.tipo,
       ).catch(() => {});
     }
 
@@ -86,10 +88,14 @@ export class ReunioesService {
     const isAdmin = userRole === 'ADMIN';
     const reuniao = await this.prisma.reuniao.findFirst({
       where: isAdmin ? { id } : { id, userId },
+      include: { lead: { select: { id: true, nome: true, email: true } } },
     });
     if (!reuniao) throw new NotFoundException('Reunião não encontrada');
 
-    return this.prisma.reuniao.update({
+    const dataAnterior = reuniao.dataHora;
+    const mudouData = data.dataHora && new Date(data.dataHora).getTime() !== dataAnterior.getTime();
+
+    const atualizada = await this.prisma.reuniao.update({
       where: { id },
       data: {
         ...(data.titulo && { titulo: data.titulo }),
@@ -104,6 +110,19 @@ export class ReunioesService {
         lead: { select: { id: true, nome: true, email: true } },
       },
     });
+
+    // Enviar email de remarcação se a data mudou e tem cliente
+    if (mudouData && atualizada.lead?.email) {
+      this.emailService.enviarReuniaoRemarcada(
+        atualizada.lead.email,
+        atualizada.lead.nome,
+        atualizada.titulo,
+        dataAnterior,
+        atualizada.dataHora,
+      ).catch(() => {});
+    }
+
+    return atualizada;
   }
 
   async remove(id: string, userId: string, userRole: string) {

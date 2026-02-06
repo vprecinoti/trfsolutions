@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { CreateFormularioDto } from './dto/create-formulario.dto';
 import { UpdateFormularioDto, FormularioStatus } from './dto/update-formulario.dto';
 
 @Injectable()
 export class FormulariosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   // Criar novo formulário (rascunho)
   async create(userId: string, dto: CreateFormularioDto) {
@@ -190,6 +194,16 @@ export class FormulariosService {
         lead: true,
       },
     });
+
+    // Enviar email de formulário preenchido
+    if (lead.email) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      this.emailService.enviarFormularioPreenchido(
+        lead.email,
+        lead.nome,
+        user?.name || 'TRF Solutions',
+      ).catch(() => {});
+    }
 
     return formularioAtualizado;
   }
