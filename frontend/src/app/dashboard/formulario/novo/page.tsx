@@ -847,12 +847,16 @@ function FormularioNovoContent() {
 
   // Estados para Proposta Comercial
   const [showProposta, setShowProposta] = useState(false);
+  const [showDesconto, setShowDesconto] = useState(false);
+  const [contratoComDesconto, setContratoComDesconto] = useState(false);
   const [cupom, setCupom] = useState("");
   const [cupomAplicado, setCupomAplicado] = useState<number | null>(null); // Valor do cupom aplicado
   const [emailContrato, setEmailContrato] = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [planoAcompanhamento, setPlanoAcompanhamento] = useState<"standard" | "premium" | "infinity" | "nenhum">("standard");
   const [showContratoModal, setShowContratoModal] = useState(false);
+  const [cupomDesconto, setCupomDesconto] = useState("");
+  const [percentualDesconto, setPercentualDesconto] = useState(40);
 
   // Carregar formulário existente
   useEffect(() => {
@@ -4926,17 +4930,37 @@ function FormularioNovoContent() {
 
                 <div className="border-t border-slate-700/50 pt-8">
                   <h3 className="text-2xl font-bold text-white mb-6 text-center">DECIDA REALIZAR</h3>
-                  <div className="max-w-md mx-auto space-y-4">
-                    <p className="text-center text-slate-400 text-sm mb-4">
-                      Clique no botão abaixo para preencher os dados do contrato e gerar o PDF
-                    </p>
-                    <button
-                      onClick={abrirModalContrato}
-                      className="w-full py-4 bg-[#3A8DFF] hover:bg-[#3A8DFF]/80 rounded-xl text-white font-semibold transition-colors flex items-center justify-center gap-2"
-                    >
-                      <FileText className="w-5 h-5" />
-                      Gerar Contrato e Enviar
-                    </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Bloco Gerar Contrato */}
+                    <div className="bg-slate-900/30 rounded-2xl border border-slate-700/50 p-6 flex flex-col items-center justify-center text-center">
+                      <p className="text-slate-400 text-sm mb-4">
+                        Preencha os dados do contrato e gere o PDF
+                      </p>
+                      <button
+                        onClick={() => {
+                          setContratoComDesconto(false);
+                          abrirModalContrato();
+                        }}
+                        className="px-6 py-3 bg-[#3A8DFF] hover:bg-[#3A8DFF]/80 rounded-xl text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <FileText className="w-5 h-5" />
+                        Gerar Contrato e Enviar
+                      </button>
+                    </div>
+
+                    {/* Bloco Liberar Desconto */}
+                    <div className="bg-slate-900/30 rounded-2xl border border-slate-700/50 p-6 flex flex-col items-center justify-center text-center">
+                      <p className="text-slate-400 text-sm mb-4">
+                        Identificar se conseguimos liberar desconto para a proposta
+                      </p>
+                      <button
+                        onClick={() => setShowDesconto(true)}
+                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Tag className="w-5 h-5" />
+                        Liberar Desconto
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4944,6 +4968,134 @@ function FormularioNovoContent() {
             </div>
           </div>
         )}
+
+      {/* Página de Desconto (À Vista) */}
+      {showDesconto && (() => {
+        const fator = (100 - percentualDesconto) / 100;
+        const totalMesOriginal = valorParcela + precosAcompanhamento[planoAcompanhamento];
+        const totalMesDesconto = totalMesOriginal * fator;
+        return (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 z-[60] overflow-auto">
+          <div className="min-h-screen p-8">
+            <div className="max-w-4xl mx-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h1 className="text-2xl font-bold text-white">Desconto Liberado</h1>
+                  <p className="text-slate-400 mt-1">Proposta com condição especial à vista</p>
+                </div>
+                <button
+                  onClick={() => { setShowDesconto(false); setCupomDesconto(""); setPercentualDesconto(40); }}
+                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              {/* Bloco desconto */}
+              <div className="bg-slate-800/30 rounded-2xl border border-emerald-600/50 p-8 mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="px-3 py-1 bg-emerald-600 text-white text-xs font-semibold rounded-full">
+                    {percentualDesconto}% OFF
+                  </span>
+                </div>
+                <p className="text-sm text-slate-400 line-through mb-1">
+                  Total anterior: {formatCurrency(totalMesOriginal)}/mês
+                </p>
+                <p className="text-3xl font-bold text-emerald-400">
+                  {formatCurrency(totalMesDesconto)}/mês
+                </p>
+              </div>
+
+              {/* Cupom de desconto */}
+              <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4 mb-8 max-w-md">
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-slate-400 whitespace-nowrap">Cupom</label>
+                  <input
+                    type="text"
+                    value={cupomDesconto}
+                    onChange={(e) => setCupomDesconto(e.target.value)}
+                    placeholder="Digite o cupom"
+                    className="flex-1 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      const codigo = cupomDesconto.toLowerCase().trim();
+                      if (codigo === "45off") setPercentualDesconto(45);
+                      else if (codigo === "50off") setPercentualDesconto(50);
+                      else if (codigo === "55off") setPercentualDesconto(55);
+                      else if (codigo === "40off") setPercentualDesconto(40);
+                      else {
+                        alert("Cupom inválido");
+                        return;
+                      }
+                      setCupomDesconto("");
+                    }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white text-sm font-medium transition-colors whitespace-nowrap"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+
+              {/* Detalhamento */}
+              <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 p-8 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-2">Consultoria</h4>
+                    <p className="text-sm text-slate-400 line-through mb-1">
+                      {numParcelas}x {formatCurrency(valorParcela)}
+                    </p>
+                    <p className="text-3xl font-bold text-emerald-400">
+                      {numParcelas}x {formatCurrency(valorParcela * fator)}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-2">Serviço de Acompanhamento</h4>
+                    <p className="text-sm text-slate-400 line-through mb-1">
+                      {planoAcompanhamento === "nenhum"
+                        ? "R$ 0,00"
+                        : formatCurrency(precosAcompanhamento[planoAcompanhamento])
+                      }
+                    </p>
+                    <p className="text-3xl font-bold text-emerald-400">
+                      {planoAcompanhamento === "nenhum"
+                        ? "R$ 0,00"
+                        : formatCurrency(precosAcompanhamento[planoAcompanhamento] * fator)
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-700/50 pt-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg text-slate-300">Total por mês</span>
+                    <span className="text-3xl font-bold text-emerald-400">
+                      {formatCurrency(totalMesDesconto)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão gerar contrato com desconto */}
+              <div className="text-center">
+                <button
+                  onClick={() => {
+                    setContratoComDesconto(true);
+                    setShowDesconto(false);
+                    abrirModalContrato();
+                  }}
+                  className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white font-semibold transition-colors inline-flex items-center gap-2"
+                >
+                  <FileText className="w-5 h-5" />
+                  Gerar Contrato com Desconto
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* Modal de Contrato */}
       <ContratoModal
@@ -4957,7 +5109,7 @@ function FormularioNovoContent() {
           cpf: undefined, // Será preenchido no modal
           profissao: situacaoProfissional.profissao,
           estadoCivil: infoFamiliar.estadoCivil,
-          valorConsultoria: precoAvistaComDesconto,
+          valorConsultoria: contratoComDesconto ? precoParcelado * ((100 - percentualDesconto) / 100) : precoParcelado,
         }}
       />
 
