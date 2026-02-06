@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 interface CreateLeadData {
   nome: string;
@@ -46,17 +47,27 @@ interface UpdateLeadData {
 
 @Injectable()
 export class LeadsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   // Criar novo lead
   async create(userId: string, data: CreateLeadData) {
-    return this.prisma.lead.create({
+    const lead = await this.prisma.lead.create({
       data: {
         ...data,
         userId,
         status: 'NOVO',
       },
     });
+
+    // Enviar email de boas-vindas (async, não bloqueia)
+    if (lead.email) {
+      this.emailService.enviarBoasVindas(lead.email, lead.nome).catch(() => {});
+    }
+
+    return lead;
   }
 
   // Buscar todos os leads (Admin vê todos, usuário vê apenas os seus)

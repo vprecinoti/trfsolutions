@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 interface CreateReuniaoData {
   titulo: string;
@@ -22,10 +23,13 @@ interface UpdateReuniaoData {
 
 @Injectable()
 export class ReunioesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   async create(userId: string, data: CreateReuniaoData) {
-    return this.prisma.reuniao.create({
+    const reuniao = await this.prisma.reuniao.create({
       data: {
         titulo: data.titulo,
         descricao: data.descricao,
@@ -39,6 +43,18 @@ export class ReunioesService {
         lead: { select: { id: true, nome: true, email: true } },
       },
     });
+
+    // Enviar email de lembrete se tem cliente vinculado com email
+    if (reuniao.lead?.email) {
+      this.emailService.enviarLembreteReuniao(
+        reuniao.lead.email,
+        reuniao.lead.nome,
+        reuniao.dataHora,
+        reuniao.titulo,
+      ).catch(() => {});
+    }
+
+    return reuniao;
   }
 
   async findAll(userId: string, userRole: string) {
