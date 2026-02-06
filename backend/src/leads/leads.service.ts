@@ -64,7 +64,9 @@ export class LeadsService {
 
     // Enviar email de boas-vindas (async, não bloqueia)
     if (lead.email) {
-      this.emailService.enviarBoasVindas(lead.email, lead.nome).catch(() => {});
+      this.emailService.enviarBoasVindas(lead.email, lead.nome).catch((err) => {
+        console.error('Falha ao enviar email de boas-vindas:', err);
+      });
     }
 
     return lead;

@@ -202,7 +202,9 @@ export class FormulariosService {
         lead.email,
         lead.nome,
         user?.name || 'TRF Solutions',
-      ).catch(() => {});
+      ).catch((err) => {
+        console.error('Falha ao enviar email de formulário preenchido:', err);
+      });
     }
 
     return formularioAtualizado;

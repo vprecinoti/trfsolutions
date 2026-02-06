@@ -16,6 +16,7 @@ export class EmailService {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
     this.resend = new Resend(apiKey);
     this.fromEmail = this.configService.get<string>('RESEND_FROM_EMAIL') || 'TRF Solutions <noreply@trfsolutions.com.br>';
+    this.logger.log(`EmailService inicializado | from: ${this.fromEmail} | apiKey: ${apiKey ? 're_...' + apiKey.slice(-4) : 'NÃO CONFIGURADA'}`);
   }
 
   private async enviar(para: string, subject: string, html: string) {

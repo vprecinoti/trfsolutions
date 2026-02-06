@@ -53,7 +53,9 @@ export class ReunioesService {
         reuniao.titulo,
         reuniao.duracao,
         reuniao.tipo,
-      ).catch(() => {});
+      ).catch((err) => {
+        console.error('Falha ao enviar email de reunião agendada:', err);
+      });
     }
 
     return reuniao;
@@ -119,7 +121,9 @@ export class ReunioesService {
         atualizada.titulo,
         dataAnterior,
         atualizada.dataHora,
-      ).catch(() => {});
+      ).catch((err) => {
+        console.error('Falha ao enviar email de reunião remarcada:', err);
+      });
     }
 
     return atualizada;
