@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   UserCog,
   Menu,
-  X
+  X,
+  CalendarDays
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
@@ -35,6 +36,12 @@ const navItems: NavItem[] = [
     label: "Clientes",
     href: "/dashboard/clientes",
     icon: <Users className="w-5 h-5" />,
+    roles: ["ADMIN", "PREMIUM"],
+  },
+  {
+    label: "Agenda",
+    href: "/dashboard/agenda",
+    icon: <CalendarDays className="w-5 h-5" />,
     roles: ["ADMIN", "PREMIUM"],
   },
   {

@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/Header";
-import { ArrowLeft, User, Mail, Phone, Building, Loader2, Save } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Building, Loader2, Save, Calendar } from "lucide-react";
 import Link from "next/link";
 import { createLead } from "@/lib/api/leads";
+import { createReuniao } from "@/lib/api/reunioes";
 
 export default function NovoClientePage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function NovoClientePage() {
     email: "",
     telefone: "",
     empresa: "",
+    dataReuniao: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -42,7 +44,19 @@ export default function NovoClientePage() {
     
     try {
       setLoading(true);
-      const newLead = await createLead(formData);
+      const { dataReuniao, ...leadData } = formData;
+      const newLead = await createLead(leadData);
+      
+      // Se tem data de reunião, cria a reunião automaticamente
+      if (dataReuniao) {
+        await createReuniao({
+          titulo: `Reunião com ${formData.nome}`,
+          dataHora: new Date(dataReuniao).toISOString(),
+          tipo: "CONSULTORIA",
+          leadId: newLead.id,
+        });
+      }
+      
       router.push(`/dashboard/clientes/${newLead.id}`);
     } catch (err: any) {
       console.error("Erro ao criar cliente:", err);
@@ -163,6 +177,22 @@ export default function NovoClientePage() {
                     onChange={(e) => handleChange("empresa", e.target.value)}
                     placeholder="Nome da empresa (opcional)"
                     className="w-full h-12 pl-11 pr-4 bg-white/[0.05] border border-white/[0.08] rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-[#3A8DFF]/50 focus:bg-white/[0.08] transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Data da Reunião */}
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Data da Reunião
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <input
+                    type="datetime-local"
+                    value={formData.dataReuniao}
+                    onChange={(e) => handleChange("dataReuniao", e.target.value)}
+                    className="w-full h-12 pl-11 pr-4 bg-white/[0.05] border border-white/[0.08] rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-[#3A8DFF]/50 focus:bg-white/[0.08] transition-all [color-scheme:dark]"
                   />
                 </div>
               </div>

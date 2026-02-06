@@ -43,6 +43,9 @@ model User {
   
   // Relacionamento: logs de login
   loginLogs     LoginLog[]
+  
+  // Relacionamento: reuniões/agenda
+  reunioes      Reuniao[]
 
   @@map("users")
 }
@@ -119,6 +122,9 @@ model Lead {
   contratoEnviadoEm DateTime? @map("contrato_enviado_em")
   contratoAssinadoEm DateTime? @map("contrato_assinado_em")
   
+  // Data da reunião (opcional)
+  dataReuniao   DateTime?   @map("data_reuniao")
+  
   status        LeadStatus  @default(NOVO)
   scoreFinal    Float?      @map("score_final")
   resultadoJson Json?       @map("resultado_json") // Armazena o resultado completo
@@ -134,6 +140,9 @@ model Lead {
   
   // Relacionamento inverso com formulário
   formulario    Formulario?
+  
+  // Relacionamento com reuniões
+  reunioes      Reuniao[]
 
   @@index([userId]) // Index para buscar leads por usuário
   @@map("leads")
@@ -212,4 +221,48 @@ enum FormularioStatus {
   RASCUNHO    // Em progresso, não finalizado
   COMPLETO    // Finalizado com sucesso
   ABANDONADO  // Marcado como abandonado pelo usuário
+}
+
+// ============================================
+// REUNIÕES / AGENDA
+// ============================================
+
+model Reuniao {
+  id            String        @id @default(uuid())
+  titulo        String
+  descricao     String?
+  dataHora      DateTime      @map("data_hora")
+  duracao       Int           @default(60) // duração em minutos
+  tipo          TipoReuniao   @default(CONSULTORIA)
+  status        StatusReuniao @default(AGENDADA)
+  
+  // Relacionamento com lead/cliente
+  leadId        String?       @map("lead_id")
+  lead          Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
+  // Relacionamento com usuário (dono da agenda)
+  userId        String        @map("user_id")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([dataHora])
+  @@map("reunioes")
+}
+
+enum TipoReuniao {
+  CONSULTORIA
+  ACOMPANHAMENTO
+  APRESENTACAO
+  OUTRO
+}
+
+enum StatusReuniao {
+  AGENDADA
+  CONFIRMADA
+  REALIZADA
+  CANCELADA
 }
