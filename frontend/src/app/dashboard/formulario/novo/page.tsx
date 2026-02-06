@@ -709,82 +709,69 @@ function FormularioNovoContent() {
     expandido: boolean;
     subcategorias: Array<{ id: string; nome: string; valor: string; }>;
   }>>([
-    { id: "gf1", categoria: "Alimentação", valor: "", expandido: false, subcategorias: [
-      { id: "gf1s1", nome: "Restaurantes", valor: "" },
-      { id: "gf1s2", nome: "Supermercado", valor: "" },
-      { id: "gf1s3", nome: "Delivery", valor: "" },
+    { id: "gf1", categoria: "Filhos", valor: "", expandido: false, subcategorias: [] },
+    { id: "gf2", categoria: "Pet", valor: "", expandido: false, subcategorias: [
+      { id: "gf2s1", nome: "Alimentação pet", valor: "" },
+      { id: "gf2s2", nome: "Clínica Veterinária", valor: "" },
+      { id: "gf2s3", nome: "Pet shop", valor: "" },
+      { id: "gf2s4", nome: "Plano de Saúde Pet", valor: "" },
     ]},
-    { id: "gf2", categoria: "Filhos", valor: "", expandido: false, subcategorias: [] },
-    { id: "gf3", categoria: "Pet", valor: "", expandido: false, subcategorias: [
-      { id: "gf3s1", nome: "Alimentação pet", valor: "" },
-      { id: "gf3s2", nome: "Clínica Veterinária", valor: "" },
-      { id: "gf3s3", nome: "Pet shop", valor: "" },
-      { id: "gf3s4", nome: "Plano de Saúde Pet", valor: "" },
+    { id: "gf3", categoria: "Serviços de terceiros", valor: "", expandido: false, subcategorias: [
+      { id: "gf3s1", nome: "Diarista", valor: "" },
     ]},
-    { id: "gf4", categoria: "Serviços de terceiros", valor: "", expandido: false, subcategorias: [
-      { id: "gf4s1", nome: "Diarista", valor: "" },
+    { id: "gf4", categoria: "Bem-estar", valor: "", expandido: false, subcategorias: [
+      { id: "gf4s1", nome: "Academia", valor: "" },
+      { id: "gf4s2", nome: "Esporte", valor: "" },
+      { id: "gf4s3", nome: "Personal trainer", valor: "" },
     ]},
-    { id: "gf5", categoria: "Automóvel", valor: "", expandido: false, subcategorias: [
-      { id: "gf5s1", nome: "Combustível", valor: "" },
-      { id: "gf5s2", nome: "Estacionamento", valor: "" },
-      { id: "gf5s3", nome: "Pedágio", valor: "" },
-      { id: "gf5s4", nome: "Manutenção", valor: "" },
-      { id: "gf5s5", nome: "Multa", valor: "" },
+    { id: "gf5", categoria: "Habitação", valor: "", expandido: false, subcategorias: [
+      { id: "gf5s1", nome: "Aluguel", valor: "" },
     ]},
-    { id: "gf6", categoria: "Bem-estar", valor: "", expandido: false, subcategorias: [
-      { id: "gf6s1", nome: "Academia", valor: "" },
-      { id: "gf6s2", nome: "Esporte", valor: "" },
-      { id: "gf6s3", nome: "Personal trainer", valor: "" },
-      { id: "gf6s4", nome: "Suplementos", valor: "" },
+    { id: "gf6", categoria: "Saúde", valor: "", expandido: false, subcategorias: [
+      { id: "gf6s1", nome: "Dentista", valor: "" },
+      { id: "gf6s2", nome: "Consulta Médica Particular", valor: "" },
+      { id: "gf6s3", nome: "Plano de saúde", valor: "" },
+      { id: "gf6s4", nome: "Terapia", valor: "" },
+      { id: "gf6s5", nome: "Nutricionista", valor: "" },
     ]},
-    { id: "gf7", categoria: "Habitação", valor: "", expandido: false, subcategorias: [
-      { id: "gf7s1", nome: "Aluguel", valor: "" },
+    { id: "gf7", categoria: "Dívidas", valor: "", expandido: false, subcategorias: [
+      { id: "gf7s1", nome: "Empréstimo", valor: "" },
+      { id: "gf7s2", nome: "Financiamento", valor: "" },
     ]},
-    { id: "gf8", categoria: "Saúde", valor: "", expandido: false, subcategorias: [
-      { id: "gf8s1", nome: "Dentista", valor: "" },
-      { id: "gf8s2", nome: "Consulta Médica Particular", valor: "" },
-      { id: "gf8s3", nome: "Plano de saúde", valor: "" },
-      { id: "gf8s4", nome: "Terapia", valor: "" },
-      { id: "gf8s5", nome: "Nutricionista", valor: "" },
+    { id: "gf8", categoria: "Contas residenciais", valor: "", expandido: false, subcategorias: [
+      { id: "gf8s1", nome: "Internet", valor: "" },
+      { id: "gf8s2", nome: "Plano de Celular", valor: "" },
+      { id: "gf8s3", nome: "Água", valor: "" },
+      { id: "gf8s4", nome: "Energia", valor: "" },
+      { id: "gf8s5", nome: "Gás", valor: "" },
+      { id: "gf8s6", nome: "Condomínio", valor: "" },
     ]},
-    { id: "gf9", categoria: "Dívidas", valor: "", expandido: false, subcategorias: [
-      { id: "gf9s1", nome: "Empréstimo", valor: "" },
-      { id: "gf9s2", nome: "Financiamento", valor: "" },
+    { id: "gf9", categoria: "Impostos", valor: "", expandido: false, subcategorias: [
+      { id: "gf9s1", nome: "IPTU", valor: "" },
+      { id: "gf9s2", nome: "IPVA", valor: "" },
+      { id: "gf9s3", nome: "DAS", valor: "" },
     ]},
-    { id: "gf10", categoria: "Contas residenciais", valor: "", expandido: false, subcategorias: [
-      { id: "gf10s1", nome: "Internet", valor: "" },
-      { id: "gf10s2", nome: "Plano de Celular", valor: "" },
-      { id: "gf10s3", nome: "Água", valor: "" },
-      { id: "gf10s4", nome: "Energia", valor: "" },
-      { id: "gf10s5", nome: "Gás", valor: "" },
-      { id: "gf10s6", nome: "Condomínio", valor: "" },
+    { id: "gf10", categoria: "Proteção", valor: "", expandido: false, subcategorias: [
+      { id: "gf10s1", nome: "Seguro de vida", valor: "" },
+      { id: "gf10s2", nome: "Seguro residencial", valor: "" },
+      { id: "gf10s3", nome: "Seguro automotivo", valor: "" },
     ]},
-    { id: "gf11", categoria: "Impostos", valor: "", expandido: false, subcategorias: [
-      { id: "gf11s1", nome: "IPTU", valor: "" },
-      { id: "gf11s2", nome: "IPVA", valor: "" },
-      { id: "gf11s3", nome: "DAS", valor: "" },
+    { id: "gf11", categoria: "Educação", valor: "", expandido: false, subcategorias: [
+      { id: "gf11s1", nome: "Cursos", valor: "" },
     ]},
-    { id: "gf12", categoria: "Seguros", valor: "", expandido: false, subcategorias: [
-      { id: "gf12s1", nome: "Seguro de vida", valor: "" },
-      { id: "gf12s2", nome: "Seguro residencial", valor: "" },
-      { id: "gf12s3", nome: "Seguro automotivo", valor: "" },
+    { id: "gf12", categoria: "Assinaturas", valor: "", expandido: false, subcategorias: [
+      { id: "gf12s1", nome: "Netflix", valor: "" },
+      { id: "gf12s2", nome: "Disney+", valor: "" },
+      { id: "gf12s3", nome: "Prime Video", valor: "" },
+      { id: "gf12s4", nome: "Spotify", valor: "" },
+      { id: "gf12s5", nome: "Deezer", valor: "" },
     ]},
-    { id: "gf13", categoria: "Educação", valor: "", expandido: false, subcategorias: [
-      { id: "gf13s1", nome: "Cursos", valor: "" },
+    { id: "gf13", categoria: "Dízimo", valor: "", expandido: false, subcategorias: [
+      { id: "gf13s1", nome: "Sem subcategoria", valor: "" },
     ]},
-    { id: "gf14", categoria: "Assinaturas", valor: "", expandido: false, subcategorias: [
-      { id: "gf14s1", nome: "Netflix", valor: "" },
-      { id: "gf14s2", nome: "Disney+", valor: "" },
-      { id: "gf14s3", nome: "Prime Video", valor: "" },
-      { id: "gf14s4", nome: "Spotify", valor: "" },
-      { id: "gf14s5", nome: "Deezer", valor: "" },
-    ]},
-    { id: "gf15", categoria: "Dízimo", valor: "", expandido: false, subcategorias: [
-      { id: "gf15s1", nome: "Sem subcategoria", valor: "" },
-    ]},
-    { id: "gf16", categoria: "Taxas", valor: "", expandido: false, subcategorias: [
-      { id: "gf16s1", nome: "Taxas bancárias", valor: "" },
-      { id: "gf16s2", nome: "Anuidade cartão", valor: "" },
+    { id: "gf14", categoria: "Taxas", valor: "", expandido: false, subcategorias: [
+      { id: "gf14s1", nome: "Taxas bancárias", valor: "" },
+      { id: "gf14s2", nome: "Anuidade cartão", valor: "" },
     ]},
   ]);
 
@@ -796,14 +783,34 @@ function FormularioNovoContent() {
     expandido: boolean;
     subcategorias: Array<{ id: string; nome: string; valor: string; }>;
   }>>([
-    { id: "gv1", categoria: "Estética e Beleza", valor: "", expandido: false, subcategorias: [] },
-    { id: "gv2", categoria: "Farmácia", valor: "", expandido: false, subcategorias: [] },
-    { id: "gv3", categoria: "Viagens", valor: "", expandido: false, subcategorias: [] },
-    { id: "gv4", categoria: "Transporte", valor: "", expandido: false, subcategorias: [] },
-    { id: "gv5", categoria: "Compras", valor: "", expandido: false, subcategorias: [] },
-    { id: "gv6", categoria: "Lazer", valor: "", expandido: false, subcategorias: [] },
-    { id: "gv7", categoria: "Presentes", valor: "", expandido: false, subcategorias: [] },
-    { id: "gv8", categoria: "Doação", valor: "", expandido: false, subcategorias: [] },
+    { id: "gv1", categoria: "Alimentação", valor: "", expandido: false, subcategorias: [
+      { id: "gv1s1", nome: "Restaurantes", valor: "" },
+      { id: "gv1s2", nome: "Supermercado", valor: "" },
+      { id: "gv1s3", nome: "Delivery", valor: "" },
+    ]},
+    { id: "gv2", categoria: "Automóvel", valor: "", expandido: false, subcategorias: [
+      { id: "gv2s1", nome: "Combustível", valor: "" },
+      { id: "gv2s2", nome: "Estacionamento", valor: "" },
+      { id: "gv2s3", nome: "Pedágio", valor: "" },
+      { id: "gv2s4", nome: "Manutenção", valor: "" },
+      { id: "gv2s5", nome: "Multa", valor: "" },
+    ]},
+    { id: "gv3", categoria: "Estética e Beleza", valor: "", expandido: false, subcategorias: [
+      { id: "gv3s1", nome: "Unha", valor: "" },
+      { id: "gv3s2", nome: "Sobrancelha", valor: "" },
+      { id: "gv3s3", nome: "Barbeiro", valor: "" },
+      { id: "gv3s4", nome: "Depilação", valor: "" },
+      { id: "gv3s5", nome: "Salão", valor: "" },
+    ]},
+    { id: "gv4", categoria: "Farmácia", valor: "", expandido: false, subcategorias: [] },
+    { id: "gv5", categoria: "Viagens", valor: "", expandido: false, subcategorias: [] },
+    { id: "gv6", categoria: "Transporte", valor: "", expandido: false, subcategorias: [
+      { id: "gv6s1", nome: "Uber", valor: "" },
+    ]},
+    { id: "gv7", categoria: "Lazer", valor: "", expandido: false, subcategorias: [] },
+    { id: "gv8", categoria: "Presentes", valor: "", expandido: false, subcategorias: [] },
+    { id: "gv9", categoria: "Compras", valor: "", expandido: false, subcategorias: [] },
+    { id: "gv10", categoria: "Doação", valor: "", expandido: false, subcategorias: [] },
   ]);
 
   // Investimentos mensais
@@ -1159,8 +1166,7 @@ function FormularioNovoContent() {
         const newSubcategorias = gf.subcategorias.map(sub => 
           sub.id === subcategoriaId ? { ...sub, valor } : sub
         );
-        const totalCategoria = newSubcategorias.reduce((sum, sub) => sum + parseCurrencyToNumber(sub.valor), 0);
-        return { ...gf, subcategorias: newSubcategorias, valor: totalCategoria.toString() };
+        return { ...gf, subcategorias: newSubcategorias };
       }
       return gf;
     }));
@@ -1172,8 +1178,7 @@ function FormularioNovoContent() {
         const newSubcategorias = gv.subcategorias.map(sub => 
           sub.id === subcategoriaId ? { ...sub, valor } : sub
         );
-        const totalCategoria = newSubcategorias.reduce((sum, sub) => sum + parseCurrencyToNumber(sub.valor), 0);
-        return { ...gv, subcategorias: newSubcategorias, valor: totalCategoria.toString() };
+        return { ...gv, subcategorias: newSubcategorias };
       }
       return gv;
     }));
@@ -1196,17 +1201,15 @@ function FormularioNovoContent() {
   const totalRendaLiquida = rendas.reduce((sum, r) => sum + parseCurrencyToNumber(r.valorLiquido), 0);
   
   const totalGastosFixos = gastosFixos.reduce((sum, gf) => {
-    if (gf.subcategorias.length > 0) {
-      return sum + gf.subcategorias.reduce((s, sub) => s + parseCurrencyToNumber(sub.valor), 0);
-    }
-    return sum + parseCurrencyToNumber(gf.valor);
+    const valorProprio = parseCurrencyToNumber(gf.valor);
+    const valorSubs = gf.subcategorias.reduce((s, sub) => s + parseCurrencyToNumber(sub.valor), 0);
+    return sum + valorProprio + valorSubs;
   }, 0);
 
   const totalGastosVariaveis = gastosVariaveis.reduce((sum, gv) => {
-    if (gv.subcategorias.length > 0) {
-      return sum + gv.subcategorias.reduce((s, sub) => s + parseCurrencyToNumber(sub.valor), 0);
-    }
-    return sum + parseCurrencyToNumber(gv.valor);
+    const valorProprio = parseCurrencyToNumber(gv.valor);
+    const valorSubs = gv.subcategorias.reduce((s, sub) => s + parseCurrencyToNumber(sub.valor), 0);
+    return sum + valorProprio + valorSubs;
   }, 0);
 
   const totalInvestimentos = parseCurrencyToNumber(investimentosMensais);
@@ -1359,17 +1362,12 @@ function FormularioNovoContent() {
 
   const precoBase = calcularPrecoBase();
   
-  // À vista: se tem cupom aplicado, usa o valor do cupom diretamente (sem desconto)
-  // Senão, usa o preço base com desconto de 14,2%
-  const precoAvista = cupomAplicado !== null ? cupomAplicado : precoBase;
-  const descontoAvista = cupomAplicado !== null ? 0 : precoBase * 0.14; // 14% de desconto só se não tiver cupom
-  const precoAvistaComDesconto = cupomAplicado !== null ? cupomAplicado : (precoBase - descontoAvista);
-  const economiaAvista = descontoAvista;
-  const percentualEconomia = 14.2;
+  // À vista: 3% da renda bruta anual (precoBase já é isso)
+  const precoAvistaComDesconto = cupomAplicado !== null ? cupomAplicado : precoBase;
 
-  // Parcelado: sempre 14,2% mais caro que o à vista
+  // Parcelado: 5,5% da renda bruta anual
   const numParcelas = 12;
-  const precoParcelado = precoAvistaComDesconto * 1.142; // 14,2% mais caro
+  const precoParcelado = Math.round(rendaBrutaAnual * 0.055 * 100) / 100;
   const valorParcela = precoParcelado / numParcelas;
 
   // Preços dos planos de acompanhamento
@@ -3922,17 +3920,16 @@ function FormularioNovoContent() {
                     <div className="col-span-4">
                       <input
                         type="text"
-                        value={gasto.subcategorias.length > 0 
-                          ? formatCurrency(gasto.subcategorias.reduce((sum, sub) => sum + parseCurrencyToNumber(sub.valor), 0))
-                          : gasto.valor ? formatCurrency(gasto.valor) : ""
-                        }
+                        value={(() => {
+                          const valorProprio = parseCurrencyToNumber(gasto.valor);
+                          const valorSubs = gasto.subcategorias.reduce((sum, sub) => sum + parseCurrencyToNumber(sub.valor), 0);
+                          const total = valorProprio + valorSubs;
+                          return total > 0 ? formatCurrency(total) : "";
+                        })()}
                         onChange={(e) => {
-                          if (gasto.subcategorias.length === 0) {
-                            setGastosFixos(prev => prev.map(g => g.id === gasto.id ? { ...g, valor: parseCurrency(e.target.value) } : g));
-                          }
+                          setGastosFixos(prev => prev.map(g => g.id === gasto.id ? { ...g, valor: parseCurrency(e.target.value) } : g));
                         }}
-                        readOnly={gasto.subcategorias.length > 0}
-                        className={`px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white w-full ${gasto.subcategorias.length > 0 ? 'cursor-not-allowed opacity-70' : ''}`}
+                        className="px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white w-full"
                         placeholder="R$ 0,00"
                       />
                     </div>
@@ -4807,8 +4804,7 @@ function FormularioNovoContent() {
               {/* Header */}
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h1 className="text-2xl font-bold text-white mb-2">Proposta Comercial</h1>
-                  <p className="text-slate-400">Renda bruta anual {formatCurrency(rendaBrutaAnual)}</p>
+                  <h1 className="text-2xl font-bold text-white">Proposta Comercial</h1>
                 </div>
                 <button
                   onClick={() => setShowProposta(false)}
@@ -4818,102 +4814,14 @@ function FormularioNovoContent() {
                 </button>
               </div>
 
-              {/* Cards de Pagamento */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Card À Vista */}
-                <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 p-6">
-                  <h3 className="text-xl font-bold text-white mb-4">À vista</h3>
-                  <div className="mb-6">
-                    <p className="text-3xl font-bold text-[#3A8DFF] mb-2">
-                      {formatCurrency(precoAvistaComDesconto)}
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-400">Método de pagamento</span>
-                        <select className="px-3 py-1.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white text-sm">
-                          <option>Selecione</option>
-                          <option>PIX</option>
-                          <option>Transferência Bancária</option>
-                          <option>Boleto</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-slate-400">Economia</span>
-                        <span className="text-[#3A8DFF] font-semibold">
-                          {formatCurrency(economiaAvista)} ({percentualEconomia}%)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <button className="w-full py-3 bg-[#3A8DFF] hover:bg-[#3A8DFF] rounded-xl text-white font-medium transition-colors">
-                    Selecionar
-                  </button>
-                </div>
-
-                {/* Card Parcelado */}
-                <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 p-6">
-                  <h3 className="text-xl font-bold text-white mb-4">Parcelado</h3>
-                  <div className="mb-6">
-                    <p className="text-3xl font-bold text-[#3A8DFF] mb-2">
-                      {formatCurrency(precoParcelado)}
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-400">N° de parcelas</span>
-                        <select className="px-3 py-1.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white text-sm">
-                          <option>12 parcelas</option>
-                          <option>6 parcelas</option>
-                          <option>3 parcelas</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-slate-400">Valor da parcela</span>
-                        <span className="text-[#3A8DFF] font-semibold">
-                          {formatCurrency(valorParcela)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <button className="w-full py-3 bg-[#3A8DFF] hover:bg-[#3A8DFF] rounded-xl text-white font-medium transition-colors">
-                    Selecionar
-                  </button>
-                </div>
-              </div>
-
-              {/* Cupom (menor, embaixo) */}
-              <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4 mb-6 max-w-md">
-                <div className="flex items-center gap-3">
-                  <label className="text-sm text-slate-400 whitespace-nowrap">Cupom</label>
-                  <input
-                    type="text"
-                    value={cupom}
-                    onChange={(e) => setCupom(e.target.value)}
-                    placeholder="Digite o cupom"
-                    className="flex-1 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 text-sm"
-                  />
-                  <button
-                    onClick={() => {
-                      // Valida e aplica o cupom apenas quando clicar
-                      if (cupom && cupom.toLowerCase().startsWith('t')) {
-                        const valorCupom = parseFloat(cupom.toLowerCase().replace('t', ''));
-                        if (!isNaN(valorCupom) && valorCupom > 0) {
-                          setCupomAplicado(valorCupom);
-                          alert(`Cupom aplicado! Valor à vista alterado para ${formatCurrency(valorCupom)}`);
-                        } else {
-                          alert("Cupom inválido. Use o formato t2500, t3000, etc.");
-                        }
-                      } else if (cupom) {
-                        alert("Cupom inválido. Use o formato t2500, t3000, etc.");
-                      } else {
-                        // Remove cupom se campo estiver vazio
-                        setCupomAplicado(null);
-                      }
-                    }}
-                    className="px-4 py-2 bg-[#3A8DFF] hover:bg-[#3A8DFF] rounded-lg text-white text-sm font-medium transition-colors whitespace-nowrap"
-                  >
-                    Validar cupom
-                  </button>
-                </div>
+              {/* Bloco do valor parcelado */}
+              <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 p-8 mb-8">
+                <p className="text-3xl font-bold text-[#3A8DFF]">
+                  {numParcelas}x {formatCurrency(valorParcela)}
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  {formatCurrency(precoParcelado)}
+                </p>
               </div>
 
               {/* Escolha do Serviço de Acompanhamento */}
@@ -4938,15 +4846,6 @@ function FormularioNovoContent() {
                     <p className="text-3xl font-bold text-[#3A8DFF] mb-4">
                       {formatCurrency(precosAcompanhamento.standard)}
                     </p>
-                    <button
-                      className={`w-full py-3 rounded-xl font-medium transition-colors ${
-                        planoAcompanhamento === "standard"
-                          ? "bg-[#3A8DFF] text-white"
-                          : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                      }`}
-                    >
-                      {planoAcompanhamento === "standard" ? "Selecionado" : "Selecionar"}
-                    </button>
                   </div>
 
                   {/* Premium */}
@@ -4972,15 +4871,6 @@ function FormularioNovoContent() {
                     <p className="text-3xl font-bold text-[#3A8DFF] mb-4">
                       {formatCurrency(precosAcompanhamento.premium)}
                     </p>
-                    <button
-                      className={`w-full py-3 rounded-xl font-medium transition-colors ${
-                        planoAcompanhamento === "premium"
-                          ? "bg-[#3A8DFF] text-white"
-                          : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                      }`}
-                    >
-                      {planoAcompanhamento === "premium" ? "Selecionado" : "Selecionar"}
-                    </button>
                   </div>
 
                   {/* Infinity */}
@@ -5001,40 +4891,17 @@ function FormularioNovoContent() {
                     <p className="text-3xl font-bold text-[#3A8DFF] mb-4">
                       {formatCurrency(precosAcompanhamento.infinity)}
                     </p>
-                    <button
-                      className={`w-full py-3 rounded-xl font-medium transition-colors ${
-                        planoAcompanhamento === "infinity"
-                          ? "bg-[#3A8DFF] text-white"
-                          : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                      }`}
-                    >
-                      {planoAcompanhamento === "infinity" ? "Selecionado" : "Selecionar"}
-                    </button>
                   </div>
-                </div>
-                {/* Opção de prosseguir sem acompanhamento */}
-                <div className="text-center">
-                  <button
-                    onClick={() => setPlanoAcompanhamento("nenhum")}
-                    className={`text-sm text-slate-400 hover:text-white transition-colors ${
-                      planoAcompanhamento === "nenhum" ? "text-[#3A8DFF] font-semibold" : ""
-                    }`}
-                  >
-                    Prosseguir sem acompanhamento
-                  </button>
                 </div>
               </div>
 
               {/* Seção de Confirmação */}
               <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
                   <div>
                     <h4 className="text-lg font-semibold text-white mb-2">Consultoria</h4>
                     <p className="text-3xl font-bold text-[#3A8DFF] mb-1">
-                      {formatCurrency(precoAvistaComDesconto)}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      (valor único de adesão, válido até a renovação de 12 meses)
+                      {numParcelas}x {formatCurrency(valorParcela)}
                     </p>
                   </div>
                   <div>
@@ -5045,12 +4912,15 @@ function FormularioNovoContent() {
                         : formatCurrency(precosAcompanhamento[planoAcompanhamento])
                       }
                     </p>
-                    <p className="text-sm text-slate-400">
-                      {planoAcompanhamento === "nenhum" 
-                        ? "(sem acompanhamento)" 
-                        : "(valor mensal)"
-                      }
-                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-700/50 pt-6 mb-8">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg text-slate-300">Total por mês</span>
+                    <span className="text-3xl font-bold text-[#3A8DFF]">
+                      {formatCurrency(valorParcela + precosAcompanhamento[planoAcompanhamento])}
+                    </span>
                   </div>
                 </div>
 
