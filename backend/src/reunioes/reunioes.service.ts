@@ -28,7 +28,7 @@ export class ReunioesService {
     private emailService: EmailService,
   ) {}
 
-  async create(userId: string, data: CreateReuniaoData) {
+  async create(userId: string, userName: string, userEmail: string, data: CreateReuniaoData) {
     const reuniao = await this.prisma.reuniao.create({
       data: {
         titulo: data.titulo,
@@ -50,9 +50,8 @@ export class ReunioesService {
         reuniao.lead.email,
         reuniao.lead.nome,
         reuniao.dataHora,
-        reuniao.titulo,
-        reuniao.duracao,
-        reuniao.tipo,
+        userName,
+        userEmail,
       ).catch((err) => {
         console.error('Falha ao enviar email de reunião agendada:', err);
       });

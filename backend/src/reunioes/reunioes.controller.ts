@@ -16,7 +16,7 @@ export class ReunioesController {
 
   @Post()
   create(@CurrentUser() user: CurrentUserData, @Body() body: any) {
-    return this.reunioesService.create(user.id, body);
+    return this.reunioesService.create(user.id, user.name, user.email, body);
   }
 
   @Get(':id')

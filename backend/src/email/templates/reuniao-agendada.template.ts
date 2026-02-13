@@ -2,42 +2,47 @@ import { baseTemplate } from './base.template';
 
 interface ReuniaoAgendadaData {
   nomeCliente: string;
-  tituloReuniao: string;
   dataFormatada: string;
   horaFormatada: string;
-  duracao: number;
-  tipo: string;
+  nomeConsultor: string;
 }
 
 export function reuniaoAgendadaTemplate(data: ReuniaoAgendadaData): string {
   return baseTemplate(`
-    <h2 style="color: #ffffff; margin: 0 0 16px 0; font-size: 22px;">Olá, ${data.nomeCliente}! 📅</h2>
-    <p style="color: #cbd5e1; line-height: 1.6; margin: 0 0 24px 0;">
-      Sua reunião foi agendada com sucesso! Confira os detalhes:
+    <p style="color: #cbd5e1; line-height: 1.8; margin: 0 0 24px 0; font-size: 15px;">
+      Olá <strong style="color: #ffffff;">${data.nomeCliente}</strong>, tudo bem?
+    </p>
+    <p style="color: #cbd5e1; line-height: 1.8; margin: 0 0 16px 0; font-size: 15px;">
+      Você acaba de dar o primeiro passo para tornar sua vida financeira pessoal organizada, protegida e equipada com ferramentas para alcançar seus objetivos de maneira estratégica e inteligente.
+    </p>
+    <p style="color: #cbd5e1; line-height: 1.8; margin: 0 0 16px 0; font-size: 15px;">
+      Nesta reunião, apresentaremos nosso trabalho e entenderemos seus objetivos e sua situação financeira atual. Juntos, iremos avaliar se você está no caminho certo para alcançar suas metas. Além disso, geraremos um diagnóstico completo com feedback sobre todas as áreas financeiras.
+    </p>
+    <p style="color: #cbd5e1; line-height: 1.8; margin: 0 0 24px 0; font-size: 15px;">
+      Nosso objetivo é trazer conhecimento e otimização do seu tempo, proporcionando clareza e direção para suas finanças.
     </p>
     <div style="background: #1a2235; border-radius: 12px; padding: 24px; border: 1px solid #3A8DFF33; margin-bottom: 24px;">
-      <h3 style="color: #3A8DFF; margin: 0 0 16px 0; font-size: 18px;">${data.tituloReuniao}</h3>
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
-          <td style="color: #94a3b8; padding: 6px 0; width: 100px;">Data</td>
-          <td style="color: #ffffff; padding: 6px 0;">${data.dataFormatada}</td>
+          <td style="color: #94a3b8; padding: 8px 0; width: 160px;">Data da Análise</td>
+          <td style="color: #ffffff; padding: 8px 0; font-weight: bold;">${data.dataFormatada} às ${data.horaFormatada}</td>
         </tr>
         <tr>
-          <td style="color: #94a3b8; padding: 6px 0;">Horário</td>
-          <td style="color: #ffffff; padding: 6px 0;">${data.horaFormatada}</td>
+          <td style="color: #94a3b8; padding: 8px 0;">Nome do Consultor</td>
+          <td style="color: #ffffff; padding: 8px 0; font-weight: bold;">${data.nomeConsultor}</td>
         </tr>
         <tr>
-          <td style="color: #94a3b8; padding: 6px 0;">Duração</td>
-          <td style="color: #ffffff; padding: 6px 0;">${data.duracao} minutos</td>
+          <td style="color: #94a3b8; padding: 8px 0;">Telefone do Consultor</td>
+          <td style="color: #ffffff; padding: 8px 0; font-weight: bold;">16 99716-4180</td>
         </tr>
         <tr>
-          <td style="color: #94a3b8; padding: 6px 0;">Tipo</td>
-          <td style="color: #ffffff; padding: 6px 0;">${data.tipo}</td>
+          <td style="color: #94a3b8; padding: 8px 0;">Local da Análise</td>
+          <td style="color: #ffffff; padding: 8px 0; font-weight: bold;">A confirmar</td>
         </tr>
       </table>
     </div>
-    <p style="color: #cbd5e1; line-height: 1.6; margin: 0;">
-      Caso precise reagendar, entre em contato conosco.
+    <p style="color: #cbd5e1; line-height: 1.6; margin: 0; font-size: 15px;">
+      Aguardamos você!
     </p>
   `);
 }

@@ -19,11 +19,12 @@ export class EmailService {
     this.logger.log(`EmailService inicializado | from: ${this.fromEmail} | apiKey: ${apiKey ? 're_...' + apiKey.slice(-4) : 'NÃO CONFIGURADA'}`);
   }
 
-  private async enviar(para: string, subject: string, html: string) {
+  private async enviar(para: string, subject: string, html: string, cc?: string) {
     try {
       const { data, error } = await this.resend.emails.send({
         from: this.fromEmail,
         to: para,
+        ...(cc && { cc }),
         subject,
         html,
       });
@@ -33,7 +34,7 @@ export class EmailService {
         return { success: false, error };
       }
 
-      this.logger.log(`Email enviado para ${para}: ${subject} (id: ${data?.id})`);
+      this.logger.log(`Email enviado para ${para}${cc ? ` (cc: ${cc})` : ''}: ${subject} (id: ${data?.id})`);
       return { success: true, id: data?.id };
     } catch (err) {
       this.logger.error(`Exceção ao enviar email para ${para}:`, err);
@@ -66,22 +67,14 @@ export class EmailService {
   }
 
   /** Email de reunião agendada (nova reunião com cliente existente) */
-  async enviarReuniaoAgendada(para: string, nomeCliente: string, dataHora: Date, titulo: string, duracao: number, tipo: string) {
-    const tipoLabel: Record<string, string> = {
-      CONSULTORIA: 'Consultoria',
-      ACOMPANHAMENTO: 'Acompanhamento',
-      APRESENTACAO: 'Apresentação',
-      OUTRO: 'Outro',
-    };
+  async enviarReuniaoAgendada(para: string, nomeCliente: string, dataHora: Date, nomeConsultor: string, emailConsultor?: string) {
     const html = reuniaoAgendadaTemplate({
       nomeCliente,
-      tituloReuniao: titulo,
       dataFormatada: this.formatarData(dataHora),
       horaFormatada: this.formatarHora(dataHora),
-      duracao,
-      tipo: tipoLabel[tipo] || tipo,
+      nomeConsultor,
     });
-    return this.enviar(para, `Reunião agendada: ${titulo} 📅`, html);
+    return this.enviar(para, `${nomeCliente}, está agendada sua análise financeira 📅`, html, emailConsultor);
   }
 
   /** Email de reunião remarcada */
