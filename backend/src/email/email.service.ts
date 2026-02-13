@@ -57,13 +57,14 @@ export class EmailService {
   // ============================================
 
   /** Email de boas-vindas ao cadastrar novo cliente */
-  async enviarBoasVindas(para: string, nomeCliente: string, dataReuniao?: Date) {
+  async enviarBoasVindas(para: string, nomeCliente: string, dataReuniao?: Date, nomeConsultor?: string, emailConsultor?: string) {
     const html = boasVindasTemplate({
       nomeCliente,
       dataReuniao: dataReuniao ? this.formatarData(dataReuniao) : undefined,
       horaReuniao: dataReuniao ? this.formatarHora(dataReuniao) : undefined,
+      nomeConsultor,
     });
-    return this.enviar(para, 'Bem-vindo à TRF Solutions! 🎉', html);
+    return this.enviar(para, `${nomeCliente}, está agendada sua análise financeira 📅`, html, emailConsultor);
   }
 
   /** Email de reunião agendada (nova reunião com cliente existente) */

@@ -53,7 +53,7 @@ export class LeadsService {
   ) {}
 
   // Criar novo lead
-  async create(userId: string, data: CreateLeadData) {
+  async create(userId: string, userName: string, userEmail: string, data: CreateLeadData) {
     const lead = await this.prisma.lead.create({
       data: {
         ...data,
@@ -64,7 +64,7 @@ export class LeadsService {
 
     // Enviar email de boas-vindas (async, não bloqueia)
     if (lead.email) {
-      this.emailService.enviarBoasVindas(lead.email, lead.nome).catch((err) => {
+      this.emailService.enviarBoasVindas(lead.email, lead.nome, undefined, userName, userEmail).catch((err) => {
         console.error('Falha ao enviar email de boas-vindas:', err);
       });
     }

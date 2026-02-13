@@ -41,7 +41,7 @@ export class LeadsController {
     @CurrentUser() user: CurrentUserData,
     @Body() createLeadDto: CreateLeadDto,
   ) {
-    return this.leadsService.create(user.id, createLeadDto);
+    return this.leadsService.create(user.id, user.name, user.email, createLeadDto);
   }
 
   // GET /leads/:id - Buscar lead por ID
