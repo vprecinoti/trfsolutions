@@ -64,7 +64,7 @@ export class EmailService {
       horaReuniao: dataReuniao ? this.formatarHora(dataReuniao) : undefined,
       nomeConsultor,
     });
-    return this.enviar(para, `${nomeCliente}, está agendada sua análise financeira 📅`, html, emailConsultor);
+    return this.enviar(para, `Bem-vindo(a) à TRF Solutions, ${nomeCliente}! 🎉`, html, emailConsultor);
   }
 
   /** Email de reunião agendada (nova reunião com cliente existente) */
