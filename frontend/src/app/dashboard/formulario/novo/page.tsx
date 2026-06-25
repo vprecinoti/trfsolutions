@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, X, Save, Loader2, Calendar, DollarSign, Briefcase, ChevronDown, ChevronRight, User, Building2, Laptop, Stethoscope, StickyNote, Target, Landmark, Shield, Palmtree, PieChart, Home, Car, Plane, Users, CreditCard, Sparkles, Plus, TrendingUp, TrendingDown, Trash2, Tag, Wallet, Heart, Baby, Dog, UserPlus, Banknote, Receipt, ShoppingCart, Pencil, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X, Save, Loader2, Calendar, DollarSign, Briefcase, ChevronDown, ChevronRight, User, Building2, Laptop, Stethoscope, StickyNote, Target, Landmark, Shield, Palmtree, PieChart, Home, Car, Plane, Users, CreditCard, Sparkles, Plus, TrendingUp, TrendingDown, Trash2, Tag, Wallet, Heart, Baby, Dog, UserPlus, Banknote, Receipt, ShoppingCart, Pencil, FileText, ScrollText, Map } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
   getFormulario, 
@@ -12,6 +12,19 @@ import {
 } from "@/lib/api/formularios";
 import { ContratoModal } from "@/components/contract/ContratoModal";
 import type { DadosContrato } from "@/components/contract/ContratoModal";
+import { PerguntaRadio } from "@/components/forms/PerguntaRadio";
+import { RelatorioFinanceiro } from "@/components/relatorio/RelatorioFinanceiro";
+import {
+  calcularResultadoGeral,
+  classificarFaixa,
+  faixaCores,
+  faixaEmoji,
+  faixaLabel,
+  feedbackDiagnosticoGeral,
+  feedbackPilar,
+  pilaresMeta,
+} from "@/lib/scoring";
+import type { ResultadoGeral } from "@/lib/scoring";
 
 // Tipos
 interface Objetivo {
@@ -517,9 +530,14 @@ function FormularioNovoContent() {
 
   // Estados para Patrimônio e Dívidas
   const [patrimonio, setPatrimonio] = useState({
-    instituicaoFinanceira: "",
-    perfilInvestidor: "",
     moradiaAtual: "",
+  });
+
+  // Pilar Patrimonial (Aba 3) - campos pontuaveis novos
+  const [pilarPatrimonial, setPilarPatrimonial] = useState({
+    rentabilidade12m: "" as "" | "ate_6" | "entre_6_13" | "mais_13" | "nao_se_aplica",
+    estrategiaVeiculo: "" as "" | "sem_interesse" | "estrategia_inteligente" | "planejamento_inicial" | "financiamento_tradicional",
+    estrategiaImovel: "" as "" | "sem_interesse" | "estrategia_avancada" | "financiamento_imobiliario" | "sem_estrategia",
   });
   
   // Listas de patrimônio
@@ -628,15 +646,16 @@ function FormularioNovoContent() {
     raca: string;
   }>>([]);
 
+  // Pilar Protecao (Aba 4) - 8 perguntas pontuadas com regra de nulidade
   const [protecaoFinanceira, setProtecaoFinanceira] = useState({
-    possuiPlanoSaude: "",
-    planoEmpresa: "",
-    instituicaoPlano: "",
-    protecaoForcaTrabalho: "",
-    protecaoDependentes: "",
-    seguroBensTrabalho: "",
-    conheceEstrategiasSucessao: "",
-    possuiEstrategiaSucessao: "",
+    reservaEmergencia: "" as "" | "nao" | "ate_6_meses" | "mais_6_meses",
+    planoSaude: "" as "" | "nao" | "sim",
+    protecaoRenda: "" as "" | "nao" | "reserva" | "seguro_renda",
+    protecaoDependentes: "" as "" | "nao" | "parcialmente" | "sim" | "nao_se_aplica",
+    seguroAuto: "" as "" | "nao" | "alguns" | "todos" | "nao_se_aplica",
+    seguroResidencial: "" as "" | "nao" | "sim",
+    responsabilidadeCivil: "" as "" | "nao" | "sim" | "nao_se_aplica",
+    sucessao: "" as "" | "nao_conheco" | "apenas_conheco" | "tenho_estrategia",
   });
 
   // Modais para Proteção Financeira
@@ -647,16 +666,28 @@ function FormularioNovoContent() {
   const [novoPet, setNovoPet] = useState({ nome: "", tipo: "", raca: "" });
 
   // Estados para Aposentadoria
+  // - Os 3 campos de IR foram movidos para o Pilar Otimizacao (Aba 6).
+  // - dataNascimento e jaAposentado seguem como cadastro/contexto.
+  // - 2 informativas (idade alvo, renda passiva) + 4 pontuadas (clareza, aporte, estrategia, evolucao).
   const [aposentadoria, setAposentadoria] = useState({
-    ultimaDeclaracaoIR: "",
-    conheceVantagensTributarias: "",
-    restituiuAnoAnterior: "",
     dataNascimento: "",
     jaAposentado: "",
     idadeDesejadaAposentadoria: "",
     rendaDesejadaAposentadoria: "",
-    possuiEstrategiaAposentadoria: "",
-    fezProjecaoAposentadoria: "",
+    // Campos pontuados (Pilar Aposentadoria)
+    clarezaAlvo: "" as "" | "nao_faco_ideia" | "estimativa" | "valor_exato",
+    aporteMensal: "" as "" | "nao_sei" | "sei_mas_nao_consigo" | "sei_e_aporto",
+    estrategia: "" as "" | "sem_estrategia" | "simples" | "diversificada",
+    evolucaoAtual: "" as "" | "ate_5" | "entre_6_25" | "entre_26_50" | "mais_50",
+  });
+
+  // Pilar Otimizacao (Aba 6 - nova)
+  const [pilarOtimizacao, setPilarOtimizacao] = useState({
+    impostoRenda: "" as "" | "otimizado" | "basico" | "prejuizo_malha" | "isento",
+    cartaoCredito: "" as "" | "consciente" | "anuidade_sem_saber" | "perigo",
+    milhas: "" as "" | "mestre" | "acumulo_por_tabela" | "nao_conheco",
+    controleGastos: "" as "" | "app_planilha_pro" | "planilha_basica" | "caderno" | "vou_na_raca",
+    percepcaoSobraMensal: "", // informativa - valor em R$ (string formatada)
   });
 
   // Estados para Orçamento
@@ -893,7 +924,10 @@ function FormularioNovoContent() {
       
       // Patrimônio
       if (dadosSalvos.patrimonio) {
-        setPatrimonio(dadosSalvos.patrimonio as { instituicaoFinanceira: string; perfilInvestidor: string; moradiaAtual: string });
+        setPatrimonio(dadosSalvos.patrimonio as { moradiaAtual: string });
+      }
+      if (dadosSalvos.pilarPatrimonial) {
+        setPilarPatrimonial(dadosSalvos.pilarPatrimonial as typeof pilarPatrimonial);
       }
       if (dadosSalvos.imoveis) {
         setImoveis(dadosSalvos.imoveis as typeof imoveis);
@@ -929,6 +963,9 @@ function FormularioNovoContent() {
       }
       if (dadosSalvos.aposentadoria) {
         setAposentadoria(dadosSalvos.aposentadoria as typeof aposentadoria);
+      }
+      if (dadosSalvos.pilarOtimizacao) {
+        setPilarOtimizacao(dadosSalvos.pilarOtimizacao as typeof pilarOtimizacao);
       }
       
       // Orçamento
@@ -986,7 +1023,15 @@ function FormularioNovoContent() {
       if (dadosCliente.nome && dadosCliente.email) secoesConcluidas++;
       if (objetivosSelecionados.length > 0) secoesConcluidas++;
       if (situacaoProfissional.profissao) secoesConcluidas++;
-      if (patrimonio.instituicaoFinanceira || patrimonio.perfilInvestidor) secoesConcluidas++;
+      if (
+        imoveis.length > 0 ||
+        automoveis.length > 0 ||
+        dividas.length > 0 ||
+        outrosBens.length > 0 ||
+        pilarPatrimonial.estrategiaVeiculo ||
+        pilarPatrimonial.estrategiaImovel ||
+        patrimonio.moradiaAtual
+      ) secoesConcluidas++;
       if (infoFamiliar.estadoCivil) secoesConcluidas++;
       if (rendas.some(r => r.valorLiquido)) secoesConcluidas++;
       if (gastosFixos.some(g => parseCurrencyToNumber(g.valor) > 0 || g.subcategorias.some(s => parseCurrencyToNumber(s.valor) > 0))) secoesConcluidas++;
@@ -1001,6 +1046,7 @@ function FormularioNovoContent() {
         situacaoProfissional,
         // Patrimônio
         patrimonio,
+        pilarPatrimonial,
         imoveis,
         automoveis,
         aplicacoesFinanceiras,
@@ -1013,6 +1059,7 @@ function FormularioNovoContent() {
         pets,
         protecaoFinanceira,
         aposentadoria,
+        pilarOtimizacao,
         // Orçamento
         rendas,
         gastosFixos,
@@ -1044,7 +1091,7 @@ function FormularioNovoContent() {
     } finally {
       setSaving(false);
     }
-  }, [formularioId, objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes]);
+  }, [formularioId, objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes]);
 
   // Auto-save com debounce
   useEffect(() => {
@@ -1055,7 +1102,7 @@ function FormularioNovoContent() {
     }, 2000); // Salva 2s após última alteração
     
     return () => clearTimeout(timer);
-  }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes, autoSave, formularioId, loading]);
+  }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes, autoSave, formularioId, loading]);
 
   // Toggle seleção de objetivo
   const toggleObjetivo = (id: string) => {
@@ -1118,25 +1165,29 @@ function FormularioNovoContent() {
   const perguntasAtuais = objetivoAtualId ? perguntasPorObjetivo[objetivoAtualId] : [];
 
   // Cálculo dos steps
-  // Step 0: Dados do Cliente (PRIMEIRO - antes de tudo)
+  // Step 0: Dados do Cliente
   // Step 1: Seleção de objetivos
   // Steps 2 a N+1: Perguntas de cada objetivo selecionado
   // Step N+2: Situação Profissional
   // Step N+3: Patrimônio e Dívidas
   // Step N+4: Proteção Financeira
   // Step N+5: Aposentadoria
-  // Step N+6: Orçamento (FINAL)
+  // Step N+6: Otimização Financeira (NOVA)
+  // Step N+7: Fluxo de Caixa (era Orçamento)
+  // Step N+8: Relatório Final (NOVO - ÚLTIMO)
   
-  const numSecoesExtras = 5; // Situação Profissional + Patrimônio + Proteção + Aposentadoria + Orçamento
+  const numSecoesExtras = 7; // Sit. Profissional + Patrimonio + Protecao + Aposentadoria + Otimizacao + Fluxo de Caixa + Relatorio
   const totalSteps = objetivosSelecionados.length + numSecoesExtras + 2; // +1 dados cliente +1 seleção objetivos
   
-  const isClientDataStep = step === 0; // PRIMEIRO passo agora
-  const isSelecaoObjetivosStep = step === 1; // Segundo passo
+  const isClientDataStep = step === 0;
+  const isSelecaoObjetivosStep = step === 1;
   const isSituacaoProfissionalStep = step === objetivosSelecionados.length + 2;
   const isPatrimonioStep = step === objetivosSelecionados.length + 3;
   const isProtecaoFinanceiraStep = step === objetivosSelecionados.length + 4;
   const isAposentadoriaStep = step === objetivosSelecionados.length + 5;
-  const isOrcamentoStep = step === objetivosSelecionados.length + 6; // ÚLTIMO passo agora
+  const isOtimizacaoStep = step === objetivosSelecionados.length + 6;
+  const isOrcamentoStep = step === objetivosSelecionados.length + 7; // agora "Fluxo de Caixa"
+  const isRelatorioStep = step === objetivosSelecionados.length + 8;
 
   // Funções auxiliares para Orçamento
   const adicionarCartao = () => {
@@ -1356,6 +1407,65 @@ function FormularioNovoContent() {
   const passivos = calcularTotalPassivos();
   const patrimonioLiquido = ativos.total - passivos;
 
+  // ============================================
+  // Resultado consolidado (5 pilares + media)
+  // ============================================
+  const resultadoGeral: ResultadoGeral = useMemo(() => {
+    return calcularResultadoGeral({
+      patrimonial: {
+        totalAtivos: ativos.total,
+        totalPassivos: passivos,
+        rentabilidade: pilarPatrimonial.rentabilidade12m as any,
+        estrategiaVeiculo: pilarPatrimonial.estrategiaVeiculo as any,
+        estrategiaImovel: pilarPatrimonial.estrategiaImovel as any,
+      },
+      protecao: {
+        reservaEmergencia: protecaoFinanceira.reservaEmergencia as any,
+        planoSaude: protecaoFinanceira.planoSaude as any,
+        protecaoRenda: protecaoFinanceira.protecaoRenda as any,
+        protecaoDependentes: protecaoFinanceira.protecaoDependentes as any,
+        seguroAuto: protecaoFinanceira.seguroAuto as any,
+        seguroResidencial: protecaoFinanceira.seguroResidencial as any,
+        responsabilidadeCivil: protecaoFinanceira.responsabilidadeCivil as any,
+        sucessao: protecaoFinanceira.sucessao as any,
+      },
+      aposentadoria: {
+        idadeAlvo: aposentadoria.idadeDesejadaAposentadoria,
+        rendaPassivaDesejada: aposentadoria.rendaDesejadaAposentadoria,
+        clarezaAlvo: aposentadoria.clarezaAlvo as any,
+        aporteMensal: aposentadoria.aporteMensal as any,
+        estrategia: aposentadoria.estrategia as any,
+        evolucaoAtual: aposentadoria.evolucaoAtual as any,
+      },
+      otimizacao: {
+        impostoRenda: pilarOtimizacao.impostoRenda as any,
+        cartaoCredito: pilarOtimizacao.cartaoCredito as any,
+        milhas: pilarOtimizacao.milhas as any,
+        controleGastos: pilarOtimizacao.controleGastos as any,
+        percepcaoSobraMensal: pilarOtimizacao.percepcaoSobraMensal,
+      },
+      fluxo: {
+        rendaLiquida: totalRendaLiquida,
+        totalGastosFixos,
+        totalGastosVariaveis,
+        totalProtecao,
+        totalInvestimentos,
+        percepcaoSobra: parseCurrencyToNumber(pilarOtimizacao.percepcaoSobraMensal),
+      },
+    });
+  }, [
+    ativos.total, passivos,
+    pilarPatrimonial.rentabilidade12m, pilarPatrimonial.estrategiaVeiculo, pilarPatrimonial.estrategiaImovel,
+    protecaoFinanceira.reservaEmergencia, protecaoFinanceira.planoSaude, protecaoFinanceira.protecaoRenda,
+    protecaoFinanceira.protecaoDependentes, protecaoFinanceira.seguroAuto, protecaoFinanceira.seguroResidencial,
+    protecaoFinanceira.responsabilidadeCivil, protecaoFinanceira.sucessao,
+    aposentadoria.idadeDesejadaAposentadoria, aposentadoria.rendaDesejadaAposentadoria,
+    aposentadoria.clarezaAlvo, aposentadoria.aporteMensal, aposentadoria.estrategia, aposentadoria.evolucaoAtual,
+    pilarOtimizacao.impostoRenda, pilarOtimizacao.cartaoCredito, pilarOtimizacao.milhas,
+    pilarOtimizacao.controleGastos, pilarOtimizacao.percepcaoSobraMensal,
+    totalRendaLiquida, totalGastosFixos, totalGastosVariaveis, totalProtecao, totalInvestimentos,
+  ]);
+
   // Finalizar formulário
   // Calcular preço da consultoria baseado na renda bruta anual
   const calcularPrecoBase = () => {
@@ -1403,8 +1513,15 @@ function FormularioNovoContent() {
         clienteTelefone: dadosCliente.telefone || undefined,
       });
       
-      // Depois completa
-      await completeFormulario(formularioId);
+      // Depois completa - inclui scoreFinal e pilarPontuacoes
+      await completeFormulario(formularioId, {
+        scoreFinal: resultadoGeral.media,
+        pilarPontuacoes: {
+          media: resultadoGeral.media,
+          faixa: resultadoGeral.faixa,
+          pilares: resultadoGeral.pilares,
+        },
+      });
       
       alert("Formulário finalizado com sucesso! Cliente adicionado à sua lista.");
       router.push("/dashboard/clientes");
@@ -1454,6 +1571,12 @@ function FormularioNovoContent() {
         profissao: dadosContrato.profissao,
         valorContrato: valorNumerico,
         formaPagamento: dadosContrato.formaPagamento,
+        scoreFinal: resultadoGeral.media,
+        pilarPontuacoes: {
+          media: resultadoGeral.media,
+          faixa: resultadoGeral.faixa,
+          pilares: resultadoGeral.pilares,
+        },
       });
 
       // Gerar PDF do contrato em base64 para enviar ao ZapSign
@@ -1524,7 +1647,14 @@ function FormularioNovoContent() {
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simula delay de envio
       
       // Completar formulário - isso já cria o lead/cliente automaticamente
-      await completeFormulario(formularioId);
+      await completeFormulario(formularioId, {
+        scoreFinal: resultadoGeral.media,
+        pilarPontuacoes: {
+          media: resultadoGeral.media,
+          faixa: resultadoGeral.faixa,
+          pilares: resultadoGeral.pilares,
+        },
+      });
       
       // Mostrar mensagem de sucesso
       alert(`✅ Contrato enviado com sucesso para ${emailContrato}\n\nCliente cadastrado na aba de Clientes!`);
@@ -1572,7 +1702,9 @@ function FormularioNovoContent() {
                  isPatrimonioStep ? "Patrimônio e Dívidas" :
                  isProtecaoFinanceiraStep ? "Proteção Financeira" :
                  isAposentadoriaStep ? "Aposentadoria" :
-                 isOrcamentoStep ? "Orçamento" :
+                 isOtimizacaoStep ? "Otimização Financeira" :
+                 isOrcamentoStep ? "Fluxo de Caixa" :
+                 isRelatorioStep ? "Relatório de diagnóstico" :
                  objetivoAtual?.titulo || "Formulário"}
               </h1>
               <p className="text-sm text-slate-400">
@@ -1588,8 +1720,12 @@ function FormularioNovoContent() {
                   ? "Informações familiares e proteção financeira"
                   : isAposentadoriaStep
                   ? "Planejamento para independência financeira no longo prazo"
+                  : isOtimizacaoStep
+                  ? "Imposto, cartões, milhas e controle de gastos"
                   : isOrcamentoStep
-                  ? "Controle suas receitas e despesas para alcançar equilíbrio financeiro"
+                  ? "Audite suas receitas e despesas reais"
+                  : isRelatorioStep
+                  ? "Diagnóstico consolidado da saúde financeira"
                   : `${step - 1} de ${objetivosSelecionados.length} - ${objetivoAtual?.titulo}`}
               </p>
             </div>
@@ -1747,21 +1883,69 @@ function FormularioNovoContent() {
                 )}
               </button>
 
-              {/* 6. Orçamento (FINAL) */}
+              {/* 6. Otimização Financeira */}
               <button
                 onClick={() => objetivosSelecionados.length > 0 && situacaoProfissional.profissao && setStep(objetivosSelecionados.length + 6)}
                 disabled={objetivosSelecionados.length === 0 || !situacaoProfissional.profissao}
                 className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl transition-all min-w-0 ${
+                  isOtimizacaoStep
+                    ? "bg-[#3A8DFF]/20 border border-[#3A8DFF]/50 text-white"
+                    : step > objetivosSelecionados.length + 6
+                    ? "bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:border-slate-600"
+                    : situacaoProfissional.profissao && objetivosSelecionados.length > 0
+                    ? "bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:border-slate-600 cursor-pointer"
+                    : "bg-slate-800/20 border border-slate-700/20 text-slate-600 cursor-not-allowed"
+                }`}
+              >
+                <Receipt className={`w-4 h-4 flex-shrink-0 ${isOtimizacaoStep ? "text-[#3A8DFF]" : "text-slate-500"}`} />
+                <span className="text-xs font-medium truncate">6. Otimização</span>
+                {step > objetivosSelecionados.length + 6 && (
+                  <div className="w-2 h-2 rounded-full bg-[#3A8DFF] flex-shrink-0" />
+                )}
+                {isOtimizacaoStep && (
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />
+                )}
+              </button>
+
+              {/* 7. Fluxo de Caixa */}
+              <button
+                onClick={() => objetivosSelecionados.length > 0 && situacaoProfissional.profissao && setStep(objetivosSelecionados.length + 7)}
+                disabled={objetivosSelecionados.length === 0 || !situacaoProfissional.profissao}
+                className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl transition-all min-w-0 ${
                   isOrcamentoStep
                     ? "bg-[#3A8DFF]/20 border border-[#3A8DFF]/50 text-white"
+                    : step > objetivosSelecionados.length + 7
+                    ? "bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:border-slate-600"
                     : situacaoProfissional.profissao && objetivosSelecionados.length > 0
                     ? "bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:border-slate-600 cursor-pointer"
                     : "bg-slate-800/20 border border-slate-700/20 text-slate-600 cursor-not-allowed"
                 }`}
               >
                 <PieChart className={`w-4 h-4 flex-shrink-0 ${isOrcamentoStep ? "text-[#3A8DFF]" : "text-slate-500"}`} />
-                <span className="text-xs font-medium truncate">6. Orçamento</span>
+                <span className="text-xs font-medium truncate">7. Fluxo de Caixa</span>
+                {step > objetivosSelecionados.length + 7 && (
+                  <div className="w-2 h-2 rounded-full bg-[#3A8DFF] flex-shrink-0" />
+                )}
                 {isOrcamentoStep && (
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />
+                )}
+              </button>
+
+              {/* 8. Relatório (FINAL) */}
+              <button
+                onClick={() => objetivosSelecionados.length > 0 && situacaoProfissional.profissao && setStep(objetivosSelecionados.length + 8)}
+                disabled={objetivosSelecionados.length === 0 || !situacaoProfissional.profissao}
+                className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl transition-all min-w-0 ${
+                  isRelatorioStep
+                    ? "bg-[#3A8DFF]/20 border border-[#3A8DFF]/50 text-white"
+                    : situacaoProfissional.profissao && objetivosSelecionados.length > 0
+                    ? "bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:border-slate-600 cursor-pointer"
+                    : "bg-slate-800/20 border border-slate-700/20 text-slate-600 cursor-not-allowed"
+                }`}
+              >
+                <Sparkles className={`w-4 h-4 flex-shrink-0 ${isRelatorioStep ? "text-[#3A8DFF]" : "text-slate-500"}`} />
+                <span className="text-xs font-medium truncate">8. Relatório</span>
+                {isRelatorioStep && (
                   <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />
                 )}
               </button>
@@ -1950,7 +2134,7 @@ function FormularioNovoContent() {
         )}
 
         {/* Steps de perguntas para cada objetivo (steps 2 a N+1) */}
-        {step > 1 && !isSituacaoProfissionalStep && !isPatrimonioStep && !isProtecaoFinanceiraStep && !isAposentadoriaStep && !isOrcamentoStep && objetivoAtual && (
+        {step > 1 && !isSituacaoProfissionalStep && !isPatrimonioStep && !isProtecaoFinanceiraStep && !isAposentadoriaStep && !isOtimizacaoStep && !isOrcamentoStep && !isRelatorioStep && objetivoAtual && (
           <div className="animate-fade-in max-w-2xl mx-auto">
             {/* Header do objetivo */}
             <div className="flex items-center gap-4 mb-8 p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
@@ -2392,81 +2576,11 @@ function FormularioNovoContent() {
               </div>
             </div>
 
-            {/* Instituição Financeira */}
+            {/* Situação de Moradia */}
             <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30 mb-6">
-              <h3 className="text-lg font-semibold text-white mb-1">Instituição Financeira</h3>
-              <p className="text-slate-400 text-sm mb-6">Selecione sua instituição financeira principal</p>
-              
-              <label className="block text-sm font-medium text-slate-300 mb-4">
-                Instituição financeira principal <span className="text-[#3A8DFF]">*</span>
-              </label>
-              
-              <p className="text-sm text-slate-500 mb-3">Instituições mais buscadas</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                {bancosPopulares.map((banco) => (
-                  <button
-                    key={banco.codigo}
-                    type="button"
-                    onClick={() => setPatrimonio(prev => ({ ...prev, instituicaoFinanceira: banco.nome }))}
-                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
-                      patrimonio.instituicaoFinanceira === banco.nome
-                        ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                        : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                    }`}
-                  >
-                    <span className="text-2xl">{banco.logo}</span>
-                    <div className="text-left">
-                      <p className="text-xs text-slate-500">[{banco.codigo}]</p>
-                      <p className="text-sm text-white truncate">{banco.nome.substring(0, 15)}...</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              
-              <p className="text-sm text-slate-500 mb-3">Todas as instituições</p>
-              <div className="relative">
-                <select
-                  value={patrimonio.instituicaoFinanceira}
-                  onChange={(e) => setPatrimonio(prev => ({ ...prev, instituicaoFinanceira: e.target.value }))}
-                  className="w-full px-4 py-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3A8DFF]"
-                >
-                  <option value="" className="bg-slate-800">Selecione...</option>
-                  {todasInstituicoes.map((inst) => (
-                    <option key={inst} value={inst} className="bg-slate-800">{inst}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Perfil do Investidor e Moradia */}
-            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30 mb-6">
-              <label className="block text-sm font-medium text-slate-300 mb-4">
-                Perfil do investidor <span className="text-[#3A8DFF]">*</span>
-              </label>
-              <div className="grid grid-cols-3 gap-3 mb-8">
-                {["Arrojado", "Conservador", "Moderado"].map((perfil) => (
-                  <button
-                    key={perfil}
-                    type="button"
-                    onClick={() => setPatrimonio(prev => ({ ...prev, perfilInvestidor: perfil }))}
-                    className={`p-4 rounded-xl border transition-all text-center ${
-                      patrimonio.perfilInvestidor === perfil
-                        ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                        : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                    }`}
-                  >
-                    <span className="text-sm font-medium">{perfil}</span>
-                    {patrimonio.perfilInvestidor === perfil && (
-                      <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />
-                    )}
-                  </button>
-                ))}
-              </div>
-
               <h3 className="text-lg font-semibold text-white mb-1">Situação de Moradia</h3>
               <p className="text-slate-400 text-sm mb-4">Informações sobre sua moradia atual</p>
-              
+
               <label className="block text-sm font-medium text-slate-300 mb-4">
                 Moradia atual <span className="text-[#3A8DFF]">*</span>
               </label>
@@ -2677,6 +2791,21 @@ function FormularioNovoContent() {
                       ))}
                     </div>
 
+                    {/* Pergunta Rentabilidade Media (Pilar Patrimonial) */}
+                    <PerguntaRadio
+                      icon={TrendingUp}
+                      titulo="Rentabilidade media dos seus investimentos nos últimos 12 meses"
+                      subtitulo="Esta pergunta entra no Pilar Patrimonial. Marque 'Não se aplica' se ainda não tem investimentos."
+                      valor={pilarPatrimonial.rentabilidade12m}
+                      onChange={(v) => setPilarPatrimonial(prev => ({ ...prev, rentabilidade12m: v as typeof prev.rentabilidade12m }))}
+                      opcoes={[
+                        { id: "ate_6", label: "Até 6% ao ano", descricao: "Rendendo pouco, quase empatando ou perdendo para a inflação (ex: Poupança).", badge: "2 pts" },
+                        { id: "entre_6_13", label: "Entre 6% e 13% ao ano", descricao: "Acompanhando a média do mercado e a taxa básica de juros (ex: CDI, Tesouro Direto).", badge: "6 pts" },
+                        { id: "mais_13", label: "Mais de 13% ao ano", descricao: "Rentabilidade acima da média de mercado, com carteira otimizada.", badge: "10 pts" },
+                        { id: "nao_se_aplica", label: "Não se aplica", descricao: "Ainda não possuo investimentos financeiros.", badge: "Anula", highlight: "anulada" },
+                      ]}
+                    />
+
                     <div className="flex justify-end">
                       <button className="px-6 py-2.5 rounded-xl bg-[#3A8DFF] hover:bg-[#3A8DFF] text-slate-900 font-medium flex items-center gap-2">
                         <Check className="w-4 h-4" />
@@ -2833,6 +2962,37 @@ function FormularioNovoContent() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Perguntas estrategicas (Pilar Patrimonial) */}
+            <div className="space-y-5 mb-6">
+              <PerguntaRadio
+                icon={Car}
+                titulo="Planejamento para aquisição ou troca de veículo"
+                subtitulo="Você tem planos para comprar ou trocar de veículo (carro/moto) nos próximos anos? Se sim, qual é a sua estratégia financeira atual?"
+                valor={pilarPatrimonial.estrategiaVeiculo}
+                onChange={(v) => setPilarPatrimonial(prev => ({ ...prev, estrategiaVeiculo: v as typeof prev.estrategiaVeiculo }))}
+                opcoes={[
+                  { id: "sem_interesse", label: "Não tenho interesse", descricao: "Não pretendo comprar ou trocar de veículo no momento.", badge: "10 pts" },
+                  { id: "estrategia_inteligente", label: "Estratégia inteligente", descricao: "Pretendo comprar à vista, com carta de consórcio contemplada ou investindo até atingir o valor.", badge: "10 pts" },
+                  { id: "planejamento_inicial", label: "Planejamento inicial", descricao: "Pretendo trocar, mas ainda não decidi a estratégia ou estou guardando sem meta.", badge: "5 pts" },
+                  { id: "financiamento_tradicional", label: "Financiamento tradicional", descricao: "Pretendo comprar ou trocar utilizando financiamento bancário comum.", badge: "2 pts" },
+                ]}
+              />
+
+              <PerguntaRadio
+                icon={Home}
+                titulo="Planejamento para aquisição de imóvel"
+                subtitulo="Você tem o objetivo de comprar um imóvel (moradia ou investimento) nos próximos anos? Qual estratégia pretende utilizar?"
+                valor={pilarPatrimonial.estrategiaImovel}
+                onChange={(v) => setPilarPatrimonial(prev => ({ ...prev, estrategiaImovel: v as typeof prev.estrategiaImovel }))}
+                opcoes={[
+                  { id: "sem_interesse", label: "Não tenho interesse / Prefiro alugar", descricao: "Não pretendo comprar imóveis no momento.", badge: "10 pts" },
+                  { id: "estrategia_avancada", label: "Estratégia avançada", descricao: "Pretendo comprar à vista ou via consórcio estruturado e planejamento de lances.", badge: "10 pts" },
+                  { id: "financiamento_imobiliario", label: "Financiamento imobiliário", descricao: "Pretendo comprar utilizando financiamento bancário de longo prazo.", badge: "5 pts" },
+                  { id: "sem_estrategia", label: "Não faço ideia", descricao: "Quero comprar, mas não tenho nenhuma estratégia e não sei por onde começar.", badge: "0 pts" },
+                ]}
+              />
             </div>
 
             {/* Botões de navegação */}
@@ -3102,198 +3262,119 @@ function FormularioNovoContent() {
               </div>
             </div>
 
-            {/* Proteção Financeira */}
-            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30 mb-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Shield className="w-5 h-5 text-[#3A8DFF]" />
-                <h3 className="text-lg font-semibold text-white">Proteção Financeira</h3>
-              </div>
-
-              {/* Plano de Saúde */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Possui plano de saúde? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["Sim", "Não"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setProtecaoFinanceira(prev => ({ ...prev, possuiPlanoSaude: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        protecaoFinanceira.possuiPlanoSaude === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={protecaoFinanceira.possuiPlanoSaude === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {protecaoFinanceira.possuiPlanoSaude === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
+            {/* Proteção Financeira - 8 perguntas pontuadas */}
+            <div className="space-y-5 mb-6">
+              <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Shield className="w-5 h-5 text-[#3A8DFF]" />
+                  <h3 className="text-lg font-semibold text-white">Questionário de Proteção</h3>
                 </div>
+                <p className="text-slate-400 text-sm">Avalie o quanto sua vida, sua renda e seus bens estão blindados contra imprevistos. Marque "Não se aplica" quando uma pergunta realmente não fizer sentido para você.</p>
               </div>
 
-              {/* Condicionais do Plano de Saúde */}
-              {protecaoFinanceira.possuiPlanoSaude === "Sim" && (
-                <>
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-300 mb-3">
-                      É um plano pela empresa que trabalha? <span className="text-red-400">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {["Sim", "Não"].map(opt => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setProtecaoFinanceira(prev => ({ ...prev, planoEmpresa: opt }))}
-                          className={`p-4 rounded-xl border transition-all ${
-                            protecaoFinanceira.planoEmpresa === opt
-                              ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                              : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                          }`}
-                        >
-                          <span className={protecaoFinanceira.planoEmpresa === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                          {protecaoFinanceira.planoEmpresa === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              <PerguntaRadio
+                icon={Wallet}
+                titulo="Reserva de emergência"
+                subtitulo="Você possui um dinheiro guardado em um investimento seguro e de resgate rápido para cobrir imprevistos?"
+                valor={protecaoFinanceira.reservaEmergencia}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, reservaEmergencia: v as typeof prev.reservaEmergencia }))}
+                opcoes={[
+                  { id: "nao", label: "Não", descricao: "Não tenho nenhuma reserva de emergência.", badge: "0 pts" },
+                  { id: "ate_6_meses", label: "Até 6 meses", descricao: "Tenho um valor que cobre meus gastos por esse período.", badge: "6 pts" },
+                  { id: "mais_6_meses", label: "Mais de 6 meses", descricao: "Tenho uma reserva robusta para longos períodos.", badge: "10 pts" },
+                ]}
+              />
 
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-300 mb-3">
-                      Qual a instituição do plano? <span className="text-red-400">*</span>
-                    </label>
-                    <select
-                      value={protecaoFinanceira.instituicaoPlano}
-                      onChange={(e) => setProtecaoFinanceira(prev => ({ ...prev, instituicaoPlano: e.target.value }))}
-                      className="w-full px-4 py-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white appearance-none"
-                    >
-                      <option value="">Selecione...</option>
-                      {planosSaude.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                </>
-              )}
+              <PerguntaRadio
+                icon={Stethoscope}
+                titulo="Plano de saúde"
+                subtitulo="Você possui plano de saúde para cobrir despesas com consultas, exames, internações ou cirurgias?"
+                valor={protecaoFinanceira.planoSaude}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, planoSaude: v as typeof prev.planoSaude }))}
+                opcoes={[
+                  { id: "nao", label: "Não", descricao: "Utilizo a rede pública ou pago tudo de forma particular.", badge: "0 pts" },
+                  { id: "sim", label: "Sim", descricao: "Possuo plano de saúde (individual, familiar ou pela empresa).", badge: "10 pts" },
+                ]}
+              />
 
-              {/* Proteção da força de trabalho */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Possui proteção da força de trabalho? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {["Não", "Não aplicável", "Sim"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setProtecaoFinanceira(prev => ({ ...prev, protecaoForcaTrabalho: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        protecaoFinanceira.protecaoForcaTrabalho === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={protecaoFinanceira.protecaoForcaTrabalho === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {protecaoFinanceira.protecaoForcaTrabalho === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <PerguntaRadio
+                icon={Heart}
+                titulo="Proteção de renda (acidente ou doença)"
+                subtitulo="Se sofrer um acidente, adoecer ou ficar um tempo sem trabalhar, tem alguma proteção financeira para garantir sua renda?"
+                valor={protecaoFinanceira.protecaoRenda}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, protecaoRenda: v as typeof prev.protecaoRenda }))}
+                opcoes={[
+                  { id: "nao", label: "Não", descricao: "Se eu parar de trabalhar hoje, fico sem nenhuma renda ou proteção.", badge: "0 pts" },
+                  { id: "reserva", label: "Reserva guardada", descricao: "Tenho uma reserva de dinheiro que cobre meus gastos por um tempo.", badge: "6 pts" },
+                  { id: "seguro_renda", label: "Seguro / DIT / Previdência", descricao: "Tenho seguro de vida, seguro de renda (DIT) ou plano de previdência.", badge: "10 pts" },
+                ]}
+              />
 
-              {/* Proteção para dependentes */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Possui proteção para dependentes? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {["Não", "Não aplicável", "Sim"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setProtecaoFinanceira(prev => ({ ...prev, protecaoDependentes: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        protecaoFinanceira.protecaoDependentes === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={protecaoFinanceira.protecaoDependentes === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {protecaoFinanceira.protecaoDependentes === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <PerguntaRadio
+                icon={Users}
+                titulo="Proteção de dependentes (falta ou doença grave)"
+                subtitulo="Se você vier a faltar ou passar por uma doença grave, as pessoas que dependem financeiramente de você estarão seguras?"
+                valor={protecaoFinanceira.protecaoDependentes}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, protecaoDependentes: v as typeof prev.protecaoDependentes }))}
+                opcoes={[
+                  { id: "nao", label: "Não", descricao: "Eles ficariam sem nenhum sustento financeiro imediato.", badge: "0 pts" },
+                  { id: "parcialmente", label: "Parcialmente", descricao: "Teriam algum amparo, mas enfrentariam dificuldades em pouco tempo.", badge: "5 pts" },
+                  { id: "sim", label: "Sim", descricao: "Possuem bens próprios ou estão protegidos por um seguro de vida com bom valor.", badge: "10 pts" },
+                  { id: "nao_se_aplica", label: "Não tenho dependentes financeiros", badge: "Anula", highlight: "anulada" },
+                ]}
+              />
 
-              {/* Seguro para bens relativos ao trabalho */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Possui seguro para bens relativos ao trabalho? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {["Não", "Não aplicável", "Sim"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setProtecaoFinanceira(prev => ({ ...prev, seguroBensTrabalho: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        protecaoFinanceira.seguroBensTrabalho === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={protecaoFinanceira.seguroBensTrabalho === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {protecaoFinanceira.seguroBensTrabalho === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <PerguntaRadio
+                icon={Car}
+                titulo="Seguro automotivo"
+                subtitulo="Seus veículos automotores possuem seguro contra roubo, furto, colisões e terceiros?"
+                valor={protecaoFinanceira.seguroAuto}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, seguroAuto: v as typeof prev.seguroAuto }))}
+                opcoes={[
+                  { id: "nao", label: "Não", descricao: "Não possuo seguro auto.", badge: "0 pts" },
+                  { id: "alguns", label: "Apenas alguns / cobertura parcial", badge: "5 pts" },
+                  { id: "todos", label: "Sim, todos segurados", badge: "10 pts" },
+                  { id: "nao_se_aplica", label: "Não tenho veículos", badge: "Anula", highlight: "anulada" },
+                ]}
+              />
 
-              {/* Conhece estratégias para sucessão patrimonial */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Conhece as estratégias para sucessão patrimonial? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {["Não", "Parcialmente", "Sim"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setProtecaoFinanceira(prev => ({ ...prev, conheceEstrategiasSucessao: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        protecaoFinanceira.conheceEstrategiasSucessao === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={protecaoFinanceira.conheceEstrategiasSucessao === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {protecaoFinanceira.conheceEstrategiasSucessao === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <PerguntaRadio
+                icon={Home}
+                titulo="Seguro residencial"
+                subtitulo="Seu imóvel próprio ou alugado possui seguro residencial contra incêndio, vendaval ou roubo?"
+                valor={protecaoFinanceira.seguroResidencial}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, seguroResidencial: v as typeof prev.seguroResidencial }))}
+                opcoes={[
+                  { id: "nao", label: "Não", descricao: "Não possuo seguro residencial.", badge: "0 pts" },
+                  { id: "sim", label: "Sim", descricao: "Minha residência principal está protegida por seguro.", badge: "10 pts" },
+                ]}
+              />
 
-              {/* Possui estratégia definida */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Possui estratégia definida e ativa para sucessão patrimonial? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["Sim", "Não"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setProtecaoFinanceira(prev => ({ ...prev, possuiEstrategiaSucessao: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        protecaoFinanceira.possuiEstrategiaSucessao === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={protecaoFinanceira.possuiEstrategiaSucessao === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {protecaoFinanceira.possuiEstrategiaSucessao === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <PerguntaRadio
+                icon={Shield}
+                titulo="Responsabilidade civil"
+                subtitulo="Sua profissão ou negócio possui Seguro de Responsabilidade Civil para cobrir processos ou danos a terceiros?"
+                valor={protecaoFinanceira.responsabilidadeCivil}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, responsabilidadeCivil: v as typeof prev.responsabilidadeCivil }))}
+                opcoes={[
+                  { id: "nao", label: "Não", descricao: "Não possuo essa proteção.", badge: "0 pts" },
+                  { id: "sim", label: "Sim", descricao: "Estou protegido contra processos e prejuízos profissionais.", badge: "10 pts" },
+                  { id: "nao_se_aplica", label: "Não se aplica", descricao: "Não exerço atividade com esse risco.", badge: "Anula", highlight: "anulada" },
+                ]}
+              />
+
+              <PerguntaRadio
+                icon={Landmark}
+                titulo="Sucessão / Holding"
+                subtitulo="Você já conhece ou utiliza estratégias de sucessão patrimonial (Holding ou Previdência) para evitar que seus bens passem por inventário?"
+                valor={protecaoFinanceira.sucessao}
+                onChange={(v) => setProtecaoFinanceira(prev => ({ ...prev, sucessao: v as typeof prev.sucessao }))}
+                opcoes={[
+                  { id: "nao_conheco", label: "Não conheço", descricao: "Meus herdeiros passariam pelo inventário tradicional.", badge: "0 pts" },
+                  { id: "apenas_conheco", label: "Apenas conheço", descricao: "Ainda não montei nenhuma estrutura jurídica ou financeira.", badge: "4 pts" },
+                  { id: "tenho_estrategia", label: "Sim, tenho estratégia montada", descricao: "Já tenho uma estrutura para proteger meus herdeiros.", badge: "10 pts" },
+                ]}
+              />
             </div>
 
             {/* Botões de navegação */}
@@ -3328,85 +3409,7 @@ function FormularioNovoContent() {
               </div>
             </div>
 
-            {/* Informações Fiscais */}
-            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30 mb-6">
-              <h3 className="text-lg font-semibold text-white mb-1">Informações Fiscais</h3>
-              <p className="text-slate-400 text-sm mb-6">Dados sobre sua declaração de imposto de renda</p>
-
-              {/* Como foi a última declaração de IR */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Como foi a última declaração de IR? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {["Completo", "Não declarado", "Simplificado"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setAposentadoria(prev => ({ ...prev, ultimaDeclaracaoIR: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        aposentadoria.ultimaDeclaracaoIR === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={aposentadoria.ultimaDeclaracaoIR === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {aposentadoria.ultimaDeclaracaoIR === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Conhece sobre vantagens tributárias */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Conhece sobre possíveis vantagens tributárias vindas de investimentos? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["Sim", "Não"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setAposentadoria(prev => ({ ...prev, conheceVantagensTributarias: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        aposentadoria.conheceVantagensTributarias === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={aposentadoria.conheceVantagensTributarias === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {aposentadoria.conheceVantagensTributarias === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Restituiu na declaração do ano anterior */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Restituiu na declaração do ano anterior? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["Sim", "Não"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setAposentadoria(prev => ({ ...prev, restituiuAnoAnterior: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        aposentadoria.restituiuAnoAnterior === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={aposentadoria.restituiuAnoAnterior === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {aposentadoria.restituiuAnoAnterior === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Informações de Aposentadoria */}
+            {/* Dados de cadastro (informativos) */}
             <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30 mb-6">
               {/* Data de nascimento */}
               <div className="mb-6">
@@ -3455,11 +3458,12 @@ function FormularioNovoContent() {
                 </div>
               </div>
 
-              {/* Idade desejada e Renda desejada */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Idade desejada e Renda desejada (informativas - alimentam o calculo mas nao pontuam sozinhas) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-3">
-                    Idade desejada de aposentadoria <span className="text-red-400">*</span>
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-3">
+                    <Target className="w-4 h-4 text-[#3A8DFF]" />
+                    Idade alvo de aposentadoria <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -3476,8 +3480,9 @@ function FormularioNovoContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-3">
-                    Renda desejada na aposentadoria <span className="text-red-400">*</span>
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-3">
+                    <Wallet className="w-4 h-4 text-[#3A8DFF]" />
+                    Renda passiva mensal desejada <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -3494,52 +3499,172 @@ function FormularioNovoContent() {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Possui uma estratégia para aposentadoria */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Possui uma estratégia para aposentadoria? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["Sim", "Não"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setAposentadoria(prev => ({ ...prev, possuiEstrategiaAposentadoria: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        aposentadoria.possuiEstrategiaAposentadoria === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={aposentadoria.possuiEstrategiaAposentadoria === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {aposentadoria.possuiEstrategiaAposentadoria === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Perguntas pontuadas (Pilar Aposentadoria) */}
+            <div className="space-y-5 mb-6">
+              <PerguntaRadio
+                icon={Target}
+                titulo="Clareza do alvo total (patrimônio necessário)"
+                subtitulo="Você sabe exatamente quanto de dinheiro precisa ter acumulado no total para gerar a renda passiva que deseja?"
+                valor={aposentadoria.clarezaAlvo}
+                onChange={(v) => setAposentadoria(prev => ({ ...prev, clarezaAlvo: v as typeof prev.clarezaAlvo }))}
+                opcoes={[
+                  { id: "nao_faco_ideia", label: "Não faço ideia", descricao: "Não sei calcular esse valor total.", badge: "0 pts" },
+                  { id: "estimativa", label: "Tenho uma estimativa", descricao: "Acho que sei, mas nunca fiz uma conta exata.", badge: "5 pts" },
+                  { id: "valor_exato", label: "Sei o valor exato", descricao: "Já fiz os cálculos e sei o tamanho da meta total.", badge: "10 pts" },
+                ]}
+              />
 
-              {/* Já fez alguma projeção para a aposentadoria */}
+              <PerguntaRadio
+                icon={DollarSign}
+                titulo="O preço mensal (aporte necessário)"
+                subtitulo="Você sabe quanto precisa poupar e investir todos os meses, a partir de hoje, para alcançar essa meta?"
+                valor={aposentadoria.aporteMensal}
+                onChange={(v) => setAposentadoria(prev => ({ ...prev, aporteMensal: v as typeof prev.aporteMensal }))}
+                opcoes={[
+                  { id: "nao_sei", label: "Não sei", descricao: "Não sei qual deve ser o meu esforço mensal atual.", badge: "0 pts" },
+                  { id: "sei_mas_nao_consigo", label: "Sei, mas não consigo poupar tudo", descricao: "Já sei o valor mensal necessário, mas hoje não sobra essa quantia.", badge: "5 pts" },
+                  { id: "sei_e_aporto", label: "Sei e já poupo essa quantia", descricao: "Sei exatamente o valor e já invisto essa meta todo mês.", badge: "10 pts" },
+                ]}
+              />
+
+              <PerguntaRadio
+                icon={Map}
+                titulo="Onde investir (a estratégia)"
+                subtitulo="Qual é a melhor estratégia de investimentos para o seu perfil chegar lá?"
+                valor={aposentadoria.estrategia}
+                onChange={(v) => setAposentadoria(prev => ({ ...prev, estrategia: v as typeof prev.estrategia }))}
+                opcoes={[
+                  { id: "sem_estrategia", label: "Não tenho estratégia", descricao: "Não sei onde investir ou conto apenas com poupança/INSS.", badge: "0 pts" },
+                  { id: "simples", label: "Estratégia simples", descricao: "Apenas Previdência Privada do banco ou Tesouro Direto.", badge: "5 pts" },
+                  { id: "diversificada", label: "Estratégia diversificada", descricao: "Carteira combinando Renda Fixa com ativos geradores de renda (Ações, FIIs).", badge: "10 pts" },
+                ]}
+              />
+
+              <PerguntaRadio
+                icon={TrendingUp}
+                titulo="Evolução atual (% do caminho)"
+                subtitulo="Pensando na sua meta de patrimônio total acumulado, quanto você já conquistou até hoje?"
+                valor={aposentadoria.evolucaoAtual}
+                onChange={(v) => setAposentadoria(prev => ({ ...prev, evolucaoAtual: v as typeof prev.evolucaoAtual }))}
+                opcoes={[
+                  { id: "ate_5", label: "0% a 5%", descricao: "Estou no ponto de partida.", badge: "1 pt" },
+                  { id: "entre_6_25", label: "6% a 25%", descricao: "Já dei os primeiros passos importantes.", badge: "4 pts" },
+                  { id: "entre_26_50", label: "26% a 50%", descricao: "Já estou na metade do caminho.", badge: "7 pts" },
+                  { id: "mais_50", label: "Mais de 50%", descricao: "Caminho avançado ou meta concluída.", badge: "10 pts" },
+                ]}
+              />
+            </div>
+
+            {/* Botões de navegação */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={stepAnterior}
+                className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Voltar
+              </button>
+              <button
+                onClick={proximoStep}
+                className="px-6 py-2.5 rounded-xl bg-[#3A8DFF] hover:bg-[#3A8DFF] transition-colors flex items-center gap-2 font-medium"
+              >
+                Continuar
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Otimização Financeira (NOVA Aba 6) */}
+        {isOtimizacaoStep && (
+          <div className="animate-fade-in max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-8 p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+              <Receipt className="w-12 h-12 text-[#3A8DFF]" />
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  Já fez alguma projeção para a aposentadoria? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["Sim", "Não"].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setAposentadoria(prev => ({ ...prev, fezProjecaoAposentadoria: opt }))}
-                      className={`p-4 rounded-xl border transition-all ${
-                        aposentadoria.fezProjecaoAposentadoria === opt
-                          ? "bg-[#3A8DFF]/20 border-[#3A8DFF]/50"
-                          : "bg-slate-900/30 border-slate-700/50 hover:border-slate-600"
-                      }`}
-                    >
-                      <span className={aposentadoria.fezProjecaoAposentadoria === opt ? "text-[#3A8DFF]" : ""}>{opt}</span>
-                      {aposentadoria.fezProjecaoAposentadoria === opt && <Check className="w-4 h-4 text-[#3A8DFF] inline-block ml-2" />}
-                    </button>
-                  ))}
+                <h2 className="text-xl font-bold">Otimização Financeira</h2>
+                <p className="text-slate-400 text-sm">Imposto de Renda, cartões, milhas e controle de gastos</p>
+              </div>
+            </div>
+
+            <div className="space-y-5 mb-6">
+              <PerguntaRadio
+                icon={FileText}
+                titulo="Gestão do Imposto de Renda e benefício fiscal"
+                subtitulo="Como foi a sua última declaração de IR e você utiliza estratégias legais para pagar menos imposto?"
+                valor={pilarOtimizacao.impostoRenda}
+                onChange={(v) => setPilarOtimizacao(prev => ({ ...prev, impostoRenda: v as typeof prev.impostoRenda }))}
+                opcoes={[
+                  { id: "otimizado", label: "Imposto otimizado", descricao: "Tive restituição (ou paguei o mínimo) usando deduções e benefícios fiscais corretos.", badge: "10 pts" },
+                  { id: "basico", label: "Declaro o básico", descricao: "Declaro normalmente, mas não uso estratégias para reduzir imposto ou aumentar restituição.", badge: "4 pts" },
+                  { id: "prejuizo_malha", label: "Prejuízo ou malha fina", descricao: "Acabo pagando muito imposto no ajuste anual ou tenho problemas frequentes.", badge: "0 pts" },
+                  { id: "isento", label: "Não declaro / Isento", descricao: "Minha renda atual está dentro da faixa de isenção.", badge: "Anula", highlight: "anulada" },
+                ]}
+              />
+
+              <PerguntaRadio
+                icon={CreditCard}
+                titulo="Uso do cartão de crédito e anuidade"
+                subtitulo="Como você utiliza o seu cartão de crédito no dia a dia e quanto paga por ele?"
+                valor={pilarOtimizacao.cartaoCredito}
+                onChange={(v) => setPilarOtimizacao(prev => ({ ...prev, cartaoCredito: v as typeof prev.cartaoCredito }))}
+                opcoes={[
+                  { id: "consciente", label: "Gasto consciente com isenção", descricao: "Uso para tudo, conheço meu cartão e não pago anuidade.", badge: "10 pts" },
+                  { id: "anuidade_sem_saber", label: "Pago anuidade sem saber", descricao: "Uso bastante, mas pago anuidade e nem sei direito os benefícios.", badge: "4 pts" },
+                  { id: "perigo", label: "Perigo constante", descricao: "Uso o cartão como extensão do salário e vivo parcelando ou pagando o mínimo.", badge: "0 pts" },
+                ]}
+              />
+
+              <PerguntaRadio
+                icon={Plane}
+                titulo="O mundo das milhas e benefícios"
+                subtitulo="Você aproveita os benefícios de milhas, pontos ou cashback do seu cartão de crédito?"
+                valor={pilarOtimizacao.milhas}
+                onChange={(v) => setPilarOtimizacao(prev => ({ ...prev, milhas: v as typeof prev.milhas }))}
+                opcoes={[
+                  { id: "mestre", label: "Mestre das milhas", descricao: "Conheço, sei como alavancar e acompanho regularmente meus pontos.", badge: "10 pts" },
+                  { id: "acumulo_por_tabela", label: "Acumulo por tabela", descricao: "Sei que junta alguma coisa, mas nunca usei e provavelmente está vencendo.", badge: "5 pts" },
+                  { id: "nao_conheco", label: "Milhas? O que é isso?", descricao: "Não faço a menor ideia de como funciona.", badge: "0 pts" },
+                ]}
+              />
+
+              <PerguntaRadio
+                icon={ScrollText}
+                titulo="Método de controle de gastos"
+                subtitulo="Como você anota e acompanha o dinheiro que sai da sua conta todo mês?"
+                valor={pilarOtimizacao.controleGastos}
+                onChange={(v) => setPilarOtimizacao(prev => ({ ...prev, controleGastos: v as typeof prev.controleGastos }))}
+                opcoes={[
+                  { id: "app_planilha_pro", label: "Aplicativo ou planilha profissional", descricao: "Anoto tudo de forma organizada e sei exatamente para onde vai cada centavo.", badge: "10 pts" },
+                  { id: "planilha_basica", label: "Planilha 'Contas a Pagar'", descricao: "Uso o Excel só para listar boletos fixos. Não bate com o dia a dia.", badge: "5 pts" },
+                  { id: "caderno", label: "Caderninho de padaria", descricao: "Anoto em papel ou bloco de notas. Geralmente perco metade dos registros.", badge: "2 pts" },
+                  { id: "vou_na_raca", label: "Vou na raça / Modo Deus", descricao: "Não faço ideia de quanto gasto. Se tem saldo, passo o cartão; se não tem, rezo.", badge: "0 pts" },
+                ]}
+              />
+
+              {/* Pergunta informativa */}
+              <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="shrink-0 w-9 h-9 rounded-xl bg-[#3A8DFF]/15 border border-[#3A8DFF]/30 flex items-center justify-center text-[#3A8DFF]"><Sparkles className="w-4 h-4" /></div>
+                  <div>
+                    <h3 className="text-base md:text-lg font-semibold text-white">O teste da percepção</h3>
+                    <p className="text-sm text-slate-400 mt-1">Sem olhar para as contas agora, quanto você ACHA que consegue poupar livre todos os meses? (informativo - será cruzado com o fluxo real)</p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={pilarOtimizacao.percepcaoSobraMensal ? formatCurrency(pilarOtimizacao.percepcaoSobraMensal) : ""}
+                    onChange={(e) => {
+                      const formatted = formatCurrency(e.target.value);
+                      setPilarOtimizacao(prev => ({ ...prev, percepcaoSobraMensal: parseCurrency(formatted).toString() }));
+                    }}
+                    className="w-full pl-12 pr-4 py-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white"
+                    placeholder="R$ 0,00"
+                  />
                 </div>
               </div>
             </div>
@@ -3571,8 +3696,8 @@ function FormularioNovoContent() {
             <div className="flex items-center gap-4 mb-8 p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50">
               <PieChart className="w-12 h-12 text-[#3A8DFF]" />
               <div>
-                <h2 className="text-xl font-bold">Orçamento</h2>
-                <p className="text-slate-400 text-sm">Controle suas receitas e despesas para alcançar equilíbrio financeiro</p>
+                <h2 className="text-xl font-bold">Fluxo de Caixa</h2>
+                <p className="text-slate-400 text-sm">Audite suas receitas e despesas reais</p>
               </div>
             </div>
 
@@ -4477,12 +4602,66 @@ function FormularioNovoContent() {
                 Voltar
               </button>
               <button
-                onClick={() => setShowRecomendacaoModal(true)}
+                onClick={proximoStep}
                 className="px-6 py-2.5 rounded-xl bg-[#3A8DFF] hover:bg-[#3A8DFF] transition-colors flex items-center gap-2 font-medium"
               >
-                Continuar
+                Ver relatório final
                 <ArrowRight className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Relatório Final */}
+        {isRelatorioStep && (
+          <div className="animate-fade-in max-w-5xl mx-auto">
+            <RelatorioFinanceiro
+              resultado={resultadoGeral}
+              nomeCliente={dadosCliente.nome}
+              dataEmissao={new Date().toLocaleDateString("pt-BR")}
+              patrimonioLiquido={patrimonioLiquido}
+            />
+
+            {/* Bloco de acoes */}
+            <div className="mt-10 rounded-3xl border border-slate-700/50 bg-slate-800/40 p-6 md:p-8">
+              <h3 className="text-lg font-semibold text-white mb-1">Próximos passos</h3>
+              <p className="text-sm text-slate-400 mb-5">
+                O relatório acima já está salvo no perfil do cliente. Escolha como prosseguir:
+              </p>
+
+              <div className="flex flex-wrap gap-3 justify-end">
+                <button
+                  onClick={stepAnterior}
+                  className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar
+                </button>
+                <button
+                  onClick={finalizarFormulario}
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  Salvar sem contrato
+                </button>
+                <button
+                  onClick={() => setShowRecomendacaoModal(true)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors flex items-center gap-2"
+                >
+                  Recomendações
+                </button>
+                <button
+                  onClick={() => {
+                    setEmailContrato(dadosCliente.email || "");
+                    setShowProposta(true);
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-[#3A8DFF] hover:bg-[#3A8DFF]/80 text-white font-semibold transition-colors flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Ver proposta e gerar contrato
+                </button>
+              </div>
             </div>
           </div>
         )}

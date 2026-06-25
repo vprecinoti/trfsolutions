@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { FormulariosService } from './formularios.service';
 import { CreateFormularioDto } from './dto/create-formulario.dto';
-import { UpdateFormularioDto, FormularioStatus } from './dto/update-formulario.dto';
+import { UpdateFormularioDto, FormularioStatus, CompleteFormularioDto } from './dto/update-formulario.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { CurrentUserData } from '../auth/decorators/current-user.decorator';
@@ -69,19 +69,7 @@ export class FormulariosController {
   complete(
     @CurrentUser() user: CurrentUserData,
     @Param('id') id: string,
-    @Body() dadosContrato?: {
-      cpf?: string;
-      rg?: string;
-      endereco?: string;
-      bairro?: string;
-      cep?: string;
-      cidade?: string;
-      estado?: string;
-      estadoCivil?: string;
-      profissao?: string;
-      valorContrato?: number;
-      formaPagamento?: string;
-    },
+    @Body() dadosContrato?: CompleteFormularioDto,
   ) {
     return this.formulariosService.complete(id, user.id, dadosContrato);
   }

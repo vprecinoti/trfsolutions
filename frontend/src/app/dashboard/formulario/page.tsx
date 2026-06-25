@@ -189,6 +189,10 @@ export default function FormularioPage() {
                           <h4 className="font-medium text-white truncate">{formulario.clienteNome}</h4>
                           <p className="text-xs text-white/50">Finalizado em {formatDate(formulario.completedAt || formulario.updatedAt)}</p>
                         </div>
+                        <Link href={`/dashboard/formulario/novo?id=${formulario.id}`}
+                          className="text-xs px-3 py-1.5 bg-[#3A8DFF]/20 text-[#3A8DFF] rounded-full hover:bg-[#3A8DFF]/30 transition-colors border border-[#3A8DFF]/30">
+                          Ver respostas e relatório
+                        </Link>
                         {formulario.lead && (
                           <Link href={`/dashboard/clientes/${formulario.lead.id}`}
                             className="text-xs px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-full hover:bg-emerald-500/30 transition-colors border border-emerald-500/30">

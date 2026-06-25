@@ -126,7 +126,8 @@ model Lead {
   dataReuniao   DateTime?   @map("data_reuniao")
   
   status        LeadStatus  @default(NOVO)
-  scoreFinal    Float?      @map("score_final")
+  scoreFinal    Float?      @map("score_final") // Media (0-100) calculada a partir dos pilares
+  pilarPontuacoes Json?     @map("pilar_pontuacoes") // Notas detalhadas por pilar do diagnostico
   resultadoJson Json?       @map("resultado_json") // Armazena o resultado completo
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")

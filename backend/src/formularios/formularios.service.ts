@@ -112,6 +112,8 @@ export class FormulariosService {
     profissao?: string;
     valorContrato?: number;
     formaPagamento?: string;
+    scoreFinal?: number;
+    pilarPontuacoes?: Record<string, unknown>;
   }) {
     const formulario = await this.findOne(id, userId);
 
@@ -120,6 +122,11 @@ export class FormulariosService {
     }
 
     let lead;
+
+    // Score arredondado em 2 casas (compativel com Float? do Prisma)
+    const scoreFinalNormalizado = typeof dadosContrato?.scoreFinal === 'number'
+      ? Math.round(dadosContrato.scoreFinal * 100) / 100
+      : undefined;
 
     // Se já existe um lead vinculado, atualiza ao invés de criar
     if (formulario.leadId) {
@@ -144,6 +151,10 @@ export class FormulariosService {
           statusContrato: 'enviado',
           contratoEnviadoEm: new Date(),
           status: 'PROPOSTA_ENVIADA',
+          scoreFinal: scoreFinalNormalizado,
+          pilarPontuacoes: dadosContrato?.pilarPontuacoes
+            ? (dadosContrato.pilarPontuacoes as any)
+            : undefined,
           resultadoJson: {
             objetivos: formulario.objetivosSelecionados,
             respostas: formulario.respostas,
@@ -173,6 +184,10 @@ export class FormulariosService {
           statusContrato: dadosContrato ? 'enviado' : 'pendente',
           contratoEnviadoEm: dadosContrato ? new Date() : undefined,
           status: dadosContrato ? 'PROPOSTA_ENVIADA' : 'FORMULARIO_PREENCHIDO',
+          scoreFinal: scoreFinalNormalizado,
+          pilarPontuacoes: dadosContrato?.pilarPontuacoes
+            ? (dadosContrato.pilarPontuacoes as any)
+            : undefined,
           resultadoJson: {
             objetivos: formulario.objetivosSelecionados,
             respostas: formulario.respostas,

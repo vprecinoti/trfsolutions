@@ -43,3 +43,24 @@ export class UpdateFormularioDto {
   status?: FormularioStatus;
 }
 
+// Payload aceito pelo endpoint POST /formularios/:id/complete
+// Inclui dados de contrato (opcional) e a pontuacao calculada no frontend.
+export class CompleteFormularioDto {
+  // Dados de contrato
+  @IsOptional() @IsString() cpf?: string;
+  @IsOptional() @IsString() rg?: string;
+  @IsOptional() @IsString() endereco?: string;
+  @IsOptional() @IsString() bairro?: string;
+  @IsOptional() @IsString() cep?: string;
+  @IsOptional() @IsString() cidade?: string;
+  @IsOptional() @IsString() estado?: string;
+  @IsOptional() @IsString() estadoCivil?: string;
+  @IsOptional() @IsString() profissao?: string;
+  @IsOptional() valorContrato?: number;
+  @IsOptional() @IsString() formaPagamento?: string;
+
+  // Pontuacao calculada no frontend e refletida no Lead
+  @IsOptional() scoreFinal?: number;
+  @IsOptional() @IsObject() pilarPontuacoes?: Record<string, unknown>;
+}
+

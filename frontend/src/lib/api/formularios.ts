@@ -79,6 +79,8 @@ export async function completeFormulario(id: string, dadosContrato?: {
   profissao?: string;
   valorContrato?: number;
   formaPagamento?: string;
+  scoreFinal?: number;
+  pilarPontuacoes?: Record<string, unknown>;
 }): Promise<Formulario> {
   const response = await api.post<Formulario>(`/formularios/${id}/complete`, dadosContrato || {});
   return response.data;
