@@ -8,7 +8,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -223,6 +222,77 @@ enum FormularioStatus {
   RASCUNHO    // Em progresso, não finalizado
   COMPLETO    // Finalizado com sucesso
   ABANDONADO  // Marcado como abandonado pelo usuário
+}
+
+// ============================================
+// BACKUP / SNAPSHOTS DE FORMULARIOS
+// ============================================
+// Cada save do auto-save cria um snapshot. Permite recuperar
+// qualquer versão anterior caso algo dê errado.
+model FormularioSnapshot {
+  id              String   @id @default(uuid())
+  formularioId    String   @map("formulario_id")
+  userId          String   @map("user_id")
+  
+  // Snapshot completo do estado do formulário (JSON com todos os dados)
+  payload         Json
+  
+  // Metadata
+  stepAtual       Int      @default(0) @map("step_atual")
+  progresso       Int      @default(0)
+  source          String   @default("auto-save") // "auto-save", "beacon", "manual", "complete"
+  
+  // Cliente que estava sendo atendido (para facilitar busca)
+  clienteNome     String?  @map("cliente_nome")
+  clienteEmail    String?  @map("cliente_email")
+  
+  // Info do dispositivo
+  userAgent       String?  @map("user_agent")
+  ipAddress       String?  @map("ip_address")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([formularioId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("formulario_snapshots")
+}
+
+// ============================================
+// LOG DE ERROS DO FRONTEND
+// ============================================
+// Registra erros de auto-save (ou outros) com o payload que tentou salvar
+// Permite recuperar dados de tentativas falhadas
+model ErrorLog {
+  id              String   @id @default(uuid())
+  userId          String?  @map("user_id")
+  formularioId    String?  @map("formulario_id")
+  
+  // Tipo de erro
+  errorType       String   @map("error_type") // "auto-save-failed", "network-error", "auth-error", etc
+  errorMessage    String   @map("error_message")
+  errorStack      String?  @map("error_stack")
+  
+  // Payload que tentava salvar quando falhou (CRÍTICO para recuperação)
+  payload         Json?
+  
+  // Contexto adicional
+  url             String?
+  userAgent       String?  @map("user_agent")
+  ipAddress       String?  @map("ip_address")
+  
+  // Resolvido? (admin marca quando resolve)
+  resolved        Boolean  @default(false)
+  resolvedAt      DateTime? @map("resolved_at")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([formularioId])
+  @@index([errorType])
+  @@index([createdAt])
+  @@index([resolved])
+  @@map("error_logs")
 }
 
 // ============================================

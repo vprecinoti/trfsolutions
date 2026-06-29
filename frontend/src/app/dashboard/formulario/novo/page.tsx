@@ -10,6 +10,16 @@ import {
   completeFormulario,
   Formulario 
 } from "@/lib/api/formularios";
+import { logFrontendError } from "@/lib/api/snapshots";
+import {
+  saveLocalBackup,
+  markBackupSynced,
+  getUnsyncedBackup,
+  clearBackupsForForm,
+  type LocalBackup,
+} from "@/lib/formularioBackup";
+import { SaveStatusToast } from "@/components/forms/SaveStatusToast";
+import { BackupRecoveryModal } from "@/components/forms/BackupRecoveryModal";
 import { ContratoModal } from "@/components/contract/ContratoModal";
 import type { DadosContrato } from "@/components/contract/ContratoModal";
 import { PerguntaRadio } from "@/components/forms/PerguntaRadio";
@@ -515,6 +525,8 @@ function FormularioNovoContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [pendingBackup, setPendingBackup] = useState<LocalBackup | null>(null);
   const [step, setStep] = useState(0); // 0 = seleção de objetivos
   const [objetivosSelecionados, setObjetivosSelecionados] = useState<string[]>([]);
   const [respostas, setRespostas] = useState<Record<string, Record<number, string>>>({});
@@ -1009,89 +1021,122 @@ function FormularioNovoContent() {
     }
   };
 
+  // Construir o payload completo do formulário (usado tanto pelo auto-save quanto pelo beacon)
+  const buildPayload = useCallback(() => {
+    let secoesConcluidas = 0;
+    const totalSecoes = 7;
+
+    if (dadosCliente.nome && dadosCliente.email) secoesConcluidas++;
+    if (objetivosSelecionados.length > 0) secoesConcluidas++;
+    if (situacaoProfissional.profissao) secoesConcluidas++;
+    if (
+      imoveis.length > 0 ||
+      automoveis.length > 0 ||
+      dividas.length > 0 ||
+      outrosBens.length > 0 ||
+      pilarPatrimonial.estrategiaVeiculo ||
+      pilarPatrimonial.estrategiaImovel ||
+      patrimonio.moradiaAtual
+    ) secoesConcluidas++;
+    if (infoFamiliar.estadoCivil) secoesConcluidas++;
+    if (rendas.some(r => r.valorLiquido)) secoesConcluidas++;
+    if (gastosFixos.some(g => parseCurrencyToNumber(g.valor) > 0 || g.subcategorias.some(s => parseCurrencyToNumber(s.valor) > 0))) secoesConcluidas++;
+
+    const progresso = Math.round((secoesConcluidas / totalSecoes) * 100);
+
+    const dadosCompletos = {
+      objetivos: respostas,
+      situacaoProfissional,
+      patrimonio,
+      pilarPatrimonial,
+      imoveis,
+      automoveis,
+      aplicacoesFinanceiras,
+      dividas,
+      outrosBens,
+      infoFamiliar,
+      conjuge,
+      filhos,
+      pets,
+      protecaoFinanceira,
+      aposentadoria,
+      pilarOtimizacao,
+      rendas,
+      gastosFixos,
+      gastosVariaveis,
+      cartoesCredito,
+      habitosConsumo,
+      outrasInfoOrcamento,
+      investimentosMensais,
+      protecaoMensal,
+      taxaRentabilidade,
+      notas,
+      recomendacoes,
+    };
+
+    return {
+      objetivosSelecionados,
+      respostas: dadosCompletos as unknown as Record<string, Record<number, string>>,
+      stepAtual: step,
+      progresso,
+      clienteNome: dadosCliente.nome || undefined,
+      clienteEmail: dadosCliente.email || undefined,
+      clienteTelefone: dadosCliente.telefone || undefined,
+    };
+  }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes]);
+
   // Auto-save - salva TODOS os dados do formulário
-  const autoSave = useCallback(async () => {
+  // CAMADA 1: localStorage (sempre, antes de qualquer rede)
+  // CAMADA 2: backend PUT (com retry exponencial)
+  // CAMADA 3: error log no servidor se tudo falhar
+  const autoSave = useCallback(async (retryCount = 0) => {
     if (!formularioId) return;
-    
+
+    const payload = buildPayload();
+
+    // CAMADA 1: SEMPRE salvar localmente PRIMEIRO (síncrono, sem rede)
+    // Isso garante que mesmo se o backend cair, os dados ficam no navegador
+    saveLocalBackup(formularioId, payload);
+
     try {
       setSaving(true);
-      
-      // Calcular progresso baseado em quantas seções foram preenchidas
-      let secoesConcluidas = 0;
-      const totalSecoes = 7; // Cliente + Objetivos + Sit.Prof + Patrimônio + Proteção + Aposentadoria + Orçamento
-      
-      if (dadosCliente.nome && dadosCliente.email) secoesConcluidas++;
-      if (objetivosSelecionados.length > 0) secoesConcluidas++;
-      if (situacaoProfissional.profissao) secoesConcluidas++;
-      if (
-        imoveis.length > 0 ||
-        automoveis.length > 0 ||
-        dividas.length > 0 ||
-        outrosBens.length > 0 ||
-        pilarPatrimonial.estrategiaVeiculo ||
-        pilarPatrimonial.estrategiaImovel ||
-        patrimonio.moradiaAtual
-      ) secoesConcluidas++;
-      if (infoFamiliar.estadoCivil) secoesConcluidas++;
-      if (rendas.some(r => r.valorLiquido)) secoesConcluidas++;
-      if (gastosFixos.some(g => parseCurrencyToNumber(g.valor) > 0 || g.subcategorias.some(s => parseCurrencyToNumber(s.valor) > 0))) secoesConcluidas++;
-      
-      const progresso = Math.round((secoesConcluidas / totalSecoes) * 100);
+      if (retryCount === 0) setSaveError(null);
 
-      // Criar objeto completo com TODOS os dados do formulário
-      const dadosCompletos = {
-        // Respostas dos objetivos
-        objetivos: respostas,
-        // Situação Profissional
-        situacaoProfissional,
-        // Patrimônio
-        patrimonio,
-        pilarPatrimonial,
-        imoveis,
-        automoveis,
-        aplicacoesFinanceiras,
-        dividas,
-        outrosBens,
-        // Proteção Financeira
-        infoFamiliar,
-        conjuge,
-        filhos,
-        pets,
-        protecaoFinanceira,
-        aposentadoria,
-        pilarOtimizacao,
-        // Orçamento
-        rendas,
-        gastosFixos,
-        gastosVariaveis,
-        cartoesCredito,
-        habitosConsumo,
-        outrasInfoOrcamento,
-        investimentosMensais,
-        protecaoMensal,
-        taxaRentabilidade,
-        notas,
-        // Recomendações
-        recomendacoes,
-      };
+      // CAMADA 2: Enviar para o backend
+      await updateFormulario(formularioId, payload);
 
-      await updateFormulario(formularioId, {
-        objetivosSelecionados,
-        respostas: dadosCompletos as unknown as Record<string, Record<number, string>>,
-        stepAtual: step,
-        progresso,
-        clienteNome: dadosCliente.nome || undefined,
-        clienteEmail: dadosCliente.email || undefined,
-        clienteTelefone: dadosCliente.telefone || undefined,
-      });
-      
       setLastSaved(new Date());
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
+      setSaveError(null);
+      markBackupSynced(formularioId);
+    } catch (err: any) {
+      console.error("Erro ao salvar (tentativa " + (retryCount + 1) + "):", err);
+
+      // Retry com exponential backoff (até 3 tentativas)
+      if (retryCount < 3) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        setTimeout(() => autoSave(retryCount + 1), delay);
+      } else {
+        // Esgotaram as tentativas - mostrar erro visível e logar no servidor
+        const errorMessage = err?.response?.data?.message || err?.message || "Erro ao salvar automaticamente";
+        setSaveError(errorMessage);
+
+        // CAMADA 3: Log de erro no servidor (best-effort, pode falhar também)
+        // Inclui o payload completo - se tudo falhar, admin recupera daqui
+        logFrontendError({
+          formularioId,
+          errorType: "auto-save-failed",
+          errorMessage,
+          errorStack: err?.stack,
+          payload,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+        }).catch(() => {
+          // Se até o log falhar, os dados ainda estão no localStorage
+        });
+      }
     } finally {
       setSaving(false);
     }
-  }, [formularioId, objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes]);
+  }, [formularioId, buildPayload]);
 
   // Auto-save com debounce
   useEffect(() => {
@@ -1103,6 +1148,120 @@ function FormularioNovoContent() {
     
     return () => clearTimeout(timer);
   }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes, autoSave, formularioId, loading]);
+
+  // BACKUP CAMADA 2: Beacon API - garante save ao fechar/navegar para fora da página
+  // sendBeacon é especial: o navegador ENVIA mesmo durante o unload da página
+  useEffect(() => {
+    if (!formularioId || loading) return;
+
+    const handleBeforeUnload = () => {
+      try {
+        const payload = buildPayload();
+        // SEMPRE salvar localmente antes de tentar beacon
+        saveLocalBackup(formularioId, payload);
+
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        if (!token) return;
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const url = `${apiUrl}/formularios/${formularioId}/beacon`;
+
+        // Authorization no header não é suportado pelo sendBeacon padrão,
+        // então usamos um Blob com type especial + token via query string seria inseguro.
+        // Alternativa: usar fetch com keepalive (suportado em todos navegadores modernos)
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+          keepalive: true, // <- chave: permite request continuar durante unload
+        }).catch(() => {
+          // Falhou? Sem problema, está salvo localmente
+        });
+      } catch {
+        // Nunca quebrar o unload
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handleBeforeUnload);
+    };
+  }, [formularioId, loading, buildPayload]);
+
+  // BACKUP CAMADA 3: Detectar backup local não sincronizado ao abrir formulário
+  // Se o usuário fechou a aba antes do save terminar, ainda temos os dados no localStorage
+  useEffect(() => {
+    if (!formularioId || loading) return;
+
+    const unsynced = getUnsyncedBackup(formularioId);
+    if (unsynced) {
+      // Só oferecer recuperação se o backup tem dados úteis
+      const hasData =
+        unsynced.data?.respostas?.objetivos &&
+        Object.keys(unsynced.data.respostas.objetivos).length > 0;
+      if (hasData) {
+        setPendingBackup(unsynced);
+      }
+    }
+  }, [formularioId, loading]);
+
+  // Recuperar backup local: aplicar os dados do localStorage ao state atual
+  const recoverFromBackup = useCallback(() => {
+    if (!pendingBackup) return;
+
+    const data = pendingBackup.data;
+    if (data.objetivosSelecionados) setObjetivosSelecionados(data.objetivosSelecionados);
+    if (data.stepAtual !== undefined) setStep(data.stepAtual);
+    if (data.clienteNome || data.clienteEmail || data.clienteTelefone) {
+      setDadosCliente({
+        nome: data.clienteNome || "",
+        email: data.clienteEmail || "",
+        telefone: data.clienteTelefone || "",
+      });
+    }
+
+    const dados = data.respostas || {};
+    if (dados.objetivos) setRespostas(dados.objetivos);
+    if (dados.situacaoProfissional) setSituacaoProfissional(dados.situacaoProfissional);
+    if (dados.patrimonio) setPatrimonio(dados.patrimonio);
+    if (dados.pilarPatrimonial) setPilarPatrimonial(dados.pilarPatrimonial);
+    if (dados.imoveis) setImoveis(dados.imoveis);
+    if (dados.automoveis) setAutomoveis(dados.automoveis);
+    if (dados.aplicacoesFinanceiras) setAplicacoesFinanceiras(dados.aplicacoesFinanceiras);
+    if (dados.dividas) setDividas(dados.dividas);
+    if (dados.outrosBens) setOutrosBens(dados.outrosBens);
+    if (dados.infoFamiliar) setInfoFamiliar(dados.infoFamiliar);
+    if (dados.conjuge) setConjuge(dados.conjuge);
+    if (dados.filhos) setFilhos(dados.filhos);
+    if (dados.pets) setPets(dados.pets);
+    if (dados.protecaoFinanceira) setProtecaoFinanceira(dados.protecaoFinanceira);
+    if (dados.aposentadoria) setAposentadoria(dados.aposentadoria);
+    if (dados.pilarOtimizacao) setPilarOtimizacao(dados.pilarOtimizacao);
+    if (dados.rendas) setRendas(dados.rendas);
+    if (dados.gastosFixos) setGastosFixos(dados.gastosFixos);
+    if (dados.gastosVariaveis) setGastosVariaveis(dados.gastosVariaveis);
+    if (dados.cartoesCredito) setCartoesCredito(dados.cartoesCredito);
+    if (dados.habitosConsumo) setHabitosConsumo(dados.habitosConsumo);
+    if (dados.outrasInfoOrcamento) setOutrasInfoOrcamento(dados.outrasInfoOrcamento);
+    if (dados.investimentosMensais) setInvestimentosMensais(dados.investimentosMensais);
+    if (dados.protecaoMensal) setProtecaoMensal(dados.protecaoMensal);
+    if (dados.taxaRentabilidade) setTaxaRentabilidade(dados.taxaRentabilidade);
+    if (dados.notas) setNotas(dados.notas);
+    if (dados.recomendacoes) setRecomendacoes(dados.recomendacoes);
+
+    setPendingBackup(null);
+  }, [pendingBackup]);
+
+  const discardBackup = useCallback(() => {
+    setPendingBackup(null);
+  }, []);
+
 
   // Toggle seleção de objetivo
   const toggleObjetivo = (id: string) => {
@@ -1522,7 +1681,10 @@ function FormularioNovoContent() {
           pilares: resultadoGeral.pilares,
         },
       });
-      
+
+      // Limpar backups locais após salvar com sucesso
+      clearBackupsForForm(formularioId);
+
       alert("Formulário finalizado com sucesso! Cliente adicionado à sua lista.");
       router.push("/dashboard/clientes");
     } catch (err) {
@@ -1684,6 +1846,23 @@ function FormularioNovoContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      {/* Indicador de status do auto-save (sempre visível) */}
+      <SaveStatusToast
+        saving={saving}
+        saveError={saveError}
+        lastSaved={lastSaved}
+        onRetry={() => autoSave(0)}
+      />
+
+      {/* Modal de recuperação de backup local (aparece se houver dados não sincronizados) */}
+      {pendingBackup && (
+        <BackupRecoveryModal
+          backup={pendingBackup}
+          onRecover={recoverFromBackup}
+          onDiscard={discardBackup}
+        />
+      )}
+
       {/* Header do formulário */}
       <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">

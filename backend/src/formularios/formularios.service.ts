@@ -70,9 +70,14 @@ export class FormulariosService {
   }
 
   // Atualizar formulário (auto-save)
-  async update(id: string, userId: string, dto: UpdateFormularioDto) {
+  async update(
+    id: string,
+    userId: string,
+    dto: UpdateFormularioDto,
+    meta?: { source?: string; userAgent?: string; ipAddress?: string },
+  ) {
     // Verificar se existe e pertence ao usuário
-    await this.findOne(id, userId);
+    const existing = await this.findOne(id, userId);
 
     const updateData: any = {
       ...dto,
@@ -83,9 +88,134 @@ export class FormulariosService {
       updateData.completedAt = new Date();
     }
 
-    return this.prisma.formulario.update({
+    const updated = await this.prisma.formulario.update({
       where: { id },
       data: updateData,
+    });
+
+    // === BACKUP: Criar snapshot do estado completo ===
+    // Não bloqueia a resposta - executa em background
+    this.createSnapshot(updated, userId, meta).catch((err) => {
+      console.error('Falha ao criar snapshot do formulário (não crítico):', err);
+    });
+
+    return updated;
+  }
+
+  /**
+   * Cria um snapshot do estado completo do formulário.
+   * Funciona como backup à prova de falhas - mesmo se algo der errado depois,
+   * é possível recuperar o estado nesse ponto.
+   * 
+   * Mantém as últimas 30 versões por formulário (limpa as mais antigas).
+   */
+  private async createSnapshot(
+    formulario: any,
+    userId: string,
+    meta?: { source?: string; userAgent?: string; ipAddress?: string },
+  ) {
+    try {
+      // Salvar snapshot
+      await this.prisma.formularioSnapshot.create({
+        data: {
+          formularioId: formulario.id,
+          userId,
+          payload: {
+            objetivosSelecionados: formulario.objetivosSelecionados,
+            respostas: formulario.respostas,
+            clienteNome: formulario.clienteNome,
+            clienteEmail: formulario.clienteEmail,
+            clienteTelefone: formulario.clienteTelefone,
+            stepAtual: formulario.stepAtual,
+            status: formulario.status,
+          },
+          stepAtual: formulario.stepAtual || 0,
+          progresso: formulario.progresso || 0,
+          source: meta?.source || 'auto-save',
+          clienteNome: formulario.clienteNome,
+          clienteEmail: formulario.clienteEmail,
+          userAgent: meta?.userAgent,
+          ipAddress: meta?.ipAddress,
+        },
+      });
+
+      // Limpar snapshots antigos: manter apenas os 30 mais recentes
+      const snapshots = await this.prisma.formularioSnapshot.findMany({
+        where: { formularioId: formulario.id },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+        skip: 30,
+      });
+
+      if (snapshots.length > 0) {
+        await this.prisma.formularioSnapshot.deleteMany({
+          where: { id: { in: snapshots.map((s) => s.id) } },
+        });
+      }
+    } catch (err) {
+      // Snapshot falhou mas o update principal foi salvo, então não rethrow
+      console.error('Erro ao criar snapshot:', err);
+    }
+  }
+
+  /**
+   * Lista snapshots de um formulário (apenas o dono pode ver)
+   */
+  async getSnapshots(formularioId: string, userId: string) {
+    // Verificar permissão
+    await this.findOne(formularioId, userId);
+
+    return this.prisma.formularioSnapshot.findMany({
+      where: { formularioId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        createdAt: true,
+        stepAtual: true,
+        progresso: true,
+        source: true,
+        clienteNome: true,
+        clienteEmail: true,
+      },
+    });
+  }
+
+  /**
+   * Recupera um snapshot específico (apenas o dono pode ver o payload completo)
+   */
+  async getSnapshot(snapshotId: string, userId: string) {
+    const snapshot = await this.prisma.formularioSnapshot.findUnique({
+      where: { id: snapshotId },
+    });
+
+    if (!snapshot) {
+      throw new NotFoundException('Snapshot não encontrado');
+    }
+
+    if (snapshot.userId !== userId) {
+      throw new ForbiddenException('Sem permissão para acessar este snapshot');
+    }
+
+    return snapshot;
+  }
+
+  /**
+   * Restaura um formulário a partir de um snapshot
+   */
+  async restoreSnapshot(snapshotId: string, userId: string) {
+    const snapshot = await this.getSnapshot(snapshotId, userId);
+    const payload = snapshot.payload as any;
+
+    return this.prisma.formulario.update({
+      where: { id: snapshot.formularioId },
+      data: {
+        objetivosSelecionados: payload.objetivosSelecionados,
+        respostas: payload.respostas,
+        clienteNome: payload.clienteNome,
+        clienteEmail: payload.clienteEmail,
+        clienteTelefone: payload.clienteTelefone,
+        stepAtual: payload.stepAtual || 0,
+      },
     });
   }
 
