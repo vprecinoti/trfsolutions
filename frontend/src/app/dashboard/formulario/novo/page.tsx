@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, X, Save, Loader2, Calendar, DollarSign, Briefcase, ChevronDown, ChevronRight, User, Building2, Laptop, Stethoscope, StickyNote, Target, Landmark, Shield, Palmtree, PieChart, Home, Car, Plane, Users, CreditCard, Sparkles, Plus, TrendingUp, TrendingDown, Trash2, Tag, Wallet, Heart, Baby, Dog, UserPlus, Banknote, Receipt, ShoppingCart, Pencil, FileText, ScrollText, Map } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X, Save, Loader2, Calendar, DollarSign, Briefcase, ChevronDown, ChevronRight, User, Building2, Laptop, Stethoscope, StickyNote, Target, Landmark, Shield, Palmtree, PieChart, Home, Car, Plane, Users, CreditCard, Sparkles, Plus, TrendingUp, TrendingDown, Trash2, Tag, Wallet, Heart, Baby, Dog, UserPlus, Banknote, Receipt, ShoppingCart, Pencil, FileText, ScrollText, Map, Zap, Download } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
   getFormulario, 
@@ -517,6 +517,24 @@ const parseDate = (value: string): string => {
   return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
 };
 
+// Tabela de cupons de desconto da Proposta Comercial.
+// Cada cupom SUBSTITUI o percentual atual (não soma). Ex: aplicar "50off" troca o desconto
+// vigente (seja o automático de 25% ou outro cupom já aplicado) por 50%.
+// Chave = código do cupom em minúsculas, valor = percentual de desconto.
+const CUPONS_DESCONTO: Record<string, number> = {
+  "25off": 25,
+  "30off": 30,
+  "35off": 35,
+  "40off": 40,
+  "45off": 45,
+  "50off": 50,
+  "55off": 55,
+  "60off": 60,
+  "65off": 65,
+  "70off": 70,
+  "75off": 75,
+};
+
 function FormularioNovoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -700,6 +718,11 @@ function FormularioNovoContent() {
     milhas: "" as "" | "mestre" | "acumulo_por_tabela" | "nao_conheco",
     controleGastos: "" as "" | "app_planilha_pro" | "planilha_basica" | "caderno" | "vou_na_raca",
     percepcaoSobraMensal: "", // informativa - valor em R$ (string formatada)
+    // Detalhes do cartão de crédito (Aba 6) - todos em R$ (string formatada)
+    limiteTotalCartoes: "",
+    limiteDisponivelCartoes: "",
+    gastoMedioCartao: "",
+    valorParceladoFaturaAtual: "",
   });
 
   // Estados para Orçamento
@@ -794,10 +817,12 @@ function FormularioNovoContent() {
       { id: "gf9s2", nome: "IPVA", valor: "" },
       { id: "gf9s3", nome: "DAS", valor: "" },
     ]},
-    { id: "gf10", categoria: "Proteção", valor: "", expandido: false, subcategorias: [
-      { id: "gf10s1", nome: "Seguro de vida", valor: "" },
-      { id: "gf10s2", nome: "Seguro residencial", valor: "" },
-      { id: "gf10s3", nome: "Seguro automotivo", valor: "" },
+    { id: "gf_estetica", categoria: "Estética e Beleza", valor: "", expandido: false, subcategorias: [
+      { id: "gf_estetica_s1", nome: "Unha", valor: "" },
+      { id: "gf_estetica_s2", nome: "Sobrancelha", valor: "" },
+      { id: "gf_estetica_s3", nome: "Barbeiro", valor: "" },
+      { id: "gf_estetica_s4", nome: "Depilação", valor: "" },
+      { id: "gf_estetica_s5", nome: "Salão", valor: "" },
     ]},
     { id: "gf11", categoria: "Educação", valor: "", expandido: false, subcategorias: [
       { id: "gf11s1", nome: "Cursos", valor: "" },
@@ -838,13 +863,6 @@ function FormularioNovoContent() {
       { id: "gv2s4", nome: "Manutenção", valor: "" },
       { id: "gv2s5", nome: "Multa", valor: "" },
     ]},
-    { id: "gv3", categoria: "Estética e Beleza", valor: "", expandido: false, subcategorias: [
-      { id: "gv3s1", nome: "Unha", valor: "" },
-      { id: "gv3s2", nome: "Sobrancelha", valor: "" },
-      { id: "gv3s3", nome: "Barbeiro", valor: "" },
-      { id: "gv3s4", nome: "Depilação", valor: "" },
-      { id: "gv3s5", nome: "Salão", valor: "" },
-    ]},
     { id: "gv4", categoria: "Farmácia", valor: "", expandido: false, subcategorias: [] },
     { id: "gv5", categoria: "Viagens", valor: "", expandido: false, subcategorias: [] },
     { id: "gv6", categoria: "Transporte", valor: "", expandido: false, subcategorias: [
@@ -858,7 +876,14 @@ function FormularioNovoContent() {
 
   // Investimentos mensais
   const [investimentosMensais, setInvestimentosMensais] = useState("");
-  const [protecaoMensal, setProtecaoMensal] = useState("");
+
+  // Proteção detalhada (nova seção independente com 4 subitens)
+  const [protecaoDetalhada, setProtecaoDetalhada] = useState({
+    seguroVida: "",
+    seguroResidencial: "",
+    seguroAutomotivo: "",
+    responsabilidadeCivil: "",
+  });
 
   // Rentabilidade e Projeção
   const [taxaRentabilidade, setTaxaRentabilidade] = useState("15");
@@ -896,10 +921,12 @@ function FormularioNovoContent() {
   const [cupomAplicado, setCupomAplicado] = useState<number | null>(null); // Valor do cupom aplicado
   const [emailContrato, setEmailContrato] = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
-  const [planoAcompanhamento, setPlanoAcompanhamento] = useState<"standard" | "premium" | "infinity" | "nenhum">("standard");
+  const [planoAcompanhamento, setPlanoAcompanhamento] = useState<"standard" | "premium" | "infinity" | "nenhum">("premium");
   const [showContratoModal, setShowContratoModal] = useState(false);
   const [cupomDesconto, setCupomDesconto] = useState("");
-  const [percentualDesconto, setPercentualDesconto] = useState(40);
+  // Desconto automático padrão ao abrir a tela (sem cupom): 25% OFF
+  const DESCONTO_AUTOMATICO_PADRAO = 25;
+  const [percentualDesconto, setPercentualDesconto] = useState(DESCONTO_AUTOMATICO_PADRAO);
 
   // Carregar formulário existente
   useEffect(() => {
@@ -1002,8 +1029,8 @@ function FormularioNovoContent() {
       if (dadosSalvos.investimentosMensais) {
         setInvestimentosMensais(dadosSalvos.investimentosMensais as string);
       }
-      if (dadosSalvos.protecaoMensal) {
-        setProtecaoMensal(dadosSalvos.protecaoMensal as string);
+      if (dadosSalvos.protecaoDetalhada) {
+        setProtecaoDetalhada(dadosSalvos.protecaoDetalhada as typeof protecaoDetalhada);
       }
       if (dadosSalvos.taxaRentabilidade) {
         setTaxaRentabilidade(dadosSalvos.taxaRentabilidade as string);
@@ -1068,7 +1095,7 @@ function FormularioNovoContent() {
       habitosConsumo,
       outrasInfoOrcamento,
       investimentosMensais,
-      protecaoMensal,
+      protecaoDetalhada,
       taxaRentabilidade,
       notas,
       recomendacoes,
@@ -1083,7 +1110,7 @@ function FormularioNovoContent() {
       clienteEmail: dadosCliente.email || undefined,
       clienteTelefone: dadosCliente.telefone || undefined,
     };
-  }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes]);
+  }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoDetalhada, taxaRentabilidade, notas, recomendacoes]);
 
   // Auto-save - salva TODOS os dados do formulário
   // CAMADA 1: localStorage (sempre, antes de qualquer rede)
@@ -1147,7 +1174,7 @@ function FormularioNovoContent() {
     }, 2000); // Salva 2s após última alteração
     
     return () => clearTimeout(timer);
-  }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoMensal, taxaRentabilidade, notas, recomendacoes, autoSave, formularioId, loading]);
+  }, [objetivosSelecionados, respostas, step, dadosCliente, situacaoProfissional, patrimonio, pilarPatrimonial, imoveis, automoveis, aplicacoesFinanceiras, dividas, outrosBens, infoFamiliar, conjuge, filhos, pets, protecaoFinanceira, aposentadoria, pilarOtimizacao, rendas, gastosFixos, gastosVariaveis, cartoesCredito, habitosConsumo, outrasInfoOrcamento, investimentosMensais, protecaoDetalhada, taxaRentabilidade, notas, recomendacoes, autoSave, formularioId, loading]);
 
   // BACKUP CAMADA 2: Beacon API - garante save ao fechar/navegar para fora da página
   // sendBeacon é especial: o navegador ENVIA mesmo durante o unload da página
@@ -1250,7 +1277,7 @@ function FormularioNovoContent() {
     if (dados.habitosConsumo) setHabitosConsumo(dados.habitosConsumo);
     if (dados.outrasInfoOrcamento) setOutrasInfoOrcamento(dados.outrasInfoOrcamento);
     if (dados.investimentosMensais) setInvestimentosMensais(dados.investimentosMensais);
-    if (dados.protecaoMensal) setProtecaoMensal(dados.protecaoMensal);
+    if (dados.protecaoDetalhada) setProtecaoDetalhada(dados.protecaoDetalhada);
     if (dados.taxaRentabilidade) setTaxaRentabilidade(dados.taxaRentabilidade);
     if (dados.notas) setNotas(dados.notas);
     if (dados.recomendacoes) setRecomendacoes(dados.recomendacoes);
@@ -1427,15 +1454,34 @@ function FormularioNovoContent() {
   }, 0);
 
   const totalInvestimentos = parseCurrencyToNumber(investimentosMensais);
-  const totalProtecao = parseCurrencyToNumber(protecaoMensal);
+  const totalProtecao =
+    parseCurrencyToNumber(protecaoDetalhada.seguroVida) +
+    parseCurrencyToNumber(protecaoDetalhada.seguroResidencial) +
+    parseCurrencyToNumber(protecaoDetalhada.seguroAutomotivo) +
+    parseCurrencyToNumber(protecaoDetalhada.responsabilidadeCivil);
   const totalGastos = totalGastosFixos + totalGastosVariaveis + totalInvestimentos + totalProtecao;
   const saldoFinal = totalRendaLiquida - totalGastos;
 
   // Percentuais para gráfico
   const percFixo = totalRendaLiquida > 0 ? (totalGastosFixos / totalRendaLiquida * 100).toFixed(0) : "0";
   const percVariavel = totalRendaLiquida > 0 ? (totalGastosVariaveis / totalRendaLiquida * 100).toFixed(0) : "0";
+  const percProtecao = totalRendaLiquida > 0 ? (totalProtecao / totalRendaLiquida * 100).toFixed(0) : "0";
   const percInvestimento = totalRendaLiquida > 0 ? (totalInvestimentos / totalRendaLiquida * 100).toFixed(0) : "0";
   const percSaldo = totalRendaLiquida > 0 ? Math.max(0, saldoFinal / totalRendaLiquida * 100).toFixed(0) : "0";
+
+  // Capacidade de Poupar (vem da Aba 6 - "Teste da Percepção")
+  const capacidadePoupar = parseCurrencyToNumber(pilarOtimizacao.percepcaoSobraMensal);
+  const capacidadePouparAnual = capacidadePoupar * 12;
+
+  // Percentuais ideais (métricas recomendadas)
+  const idealFixo = 50;
+  const idealVariavel = 25;
+  const idealProtecao = 10;
+  const idealInvestimento = 15;
+  const atualFixo = Number(percFixo);
+  const atualVariavel = Number(percVariavel);
+  const atualProtecao = Number(percProtecao);
+  const atualInvestimento = Number(percInvestimento);
 
   // Simulação anual
   const rendaBrutaAnual = totalRendaBruta * 12;
@@ -1443,25 +1489,14 @@ function FormularioNovoContent() {
   const gastosAnuais = totalGastos * 12;
   const saldoAnual = saldoFinal * 12;
   
-  // Cálculo AUTOMÁTICO da capacidade de poupar (igual à plataforma de referência)
-  // Capacidade mínima = Saldo arredondado para cima para o próximo múltiplo de 500
-  const capacidadeMinPouparMensal = saldoFinal > 0 
-    ? Math.ceil(saldoFinal / 500) * 500 
-    : 0;
-  
-  // Capacidade máxima = Renda Líquida - Gastos Variáveis (potencial se cortar variáveis)
-  const capacidadeMaxPouparMensal = Math.max(0, totalRendaLiquida - totalGastosVariaveis);
-  
-  const capacidadeMinPouparAnual = capacidadeMinPouparMensal * 12;
-  const capacidadeMaxPouparAnual = capacidadeMaxPouparMensal * 12;
-  
-  // Valor investido anualmente: usa a diferença (capacidade máxima - saldo)
-  const valorInvestidoAnual = capacidadeMaxPouparAnual > 0 
-    ? capacidadeMaxPouparAnual - saldoAnual
+  // Valor investido anualmente: baseado na capacidade de poupar informada na Aba 6.
+  // Se não houver percepção informada, usa o saldo anual como fallback.
+  const valorInvestidoAnual = capacidadePouparAnual > 0
+    ? capacidadePouparAnual
     : (saldoAnual > 0 ? saldoAnual : 0);
-  
-  // Diferença anual entre saldo e capacidade de poupança informada
-  const diferencaAnual = capacidadeMaxPouparAnual - saldoAnual;
+
+  // Diferença anual entre saldo real e capacidade de poupança informada
+  const diferencaAnual = capacidadePouparAnual - saldoAnual;
 
   // Projeção de investimento (30 anos) - gera dados para o gráfico
   const dadosProjecao = useMemo(() => {
@@ -1638,9 +1673,9 @@ function FormularioNovoContent() {
   // À vista: 3% da renda bruta anual (precoBase já é isso)
   const precoAvistaComDesconto = cupomAplicado !== null ? cupomAplicado : precoBase;
 
-  // Parcelado: 5,5% da renda bruta anual
+  // Proposta comercial: 39% da renda bruta anual (regra fixa acordada)
   const numParcelas = 12;
-  const precoParcelado = Math.round(rendaBrutaAnual * 0.055 * 100) / 100;
+  const precoParcelado = Math.round(rendaBrutaAnual * 0.39 * 100) / 100;
   const valorParcela = precoParcelado / numParcelas;
 
   // Preços dos planos de acompanhamento
@@ -1698,6 +1733,69 @@ function FormularioNovoContent() {
   // Abre o modal de contrato para preencher os dados
   const abrirModalContrato = () => {
     setShowContratoModal(true);
+  };
+
+  // Gera PDF do relatório completo (Aba 7 + diagnóstico) via html2canvas + jspdf
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const gerarPdfRelatorio = async () => {
+    const el = document.getElementById("relatorio-pdf-content");
+    if (!el) {
+      alert("Não foi possível localizar o conteúdo do relatório.");
+      return;
+    }
+    try {
+      setGerandoPdf(true);
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      // Renderiza o DOM em canvas (alta resolução)
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#0f172a", // slate-900
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: el.scrollWidth,
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+
+      // Layout PDF A4 retrato: 210 x 297 mm
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidthMm = pdf.internal.pageSize.getWidth();
+      const pageHeightMm = pdf.internal.pageSize.getHeight();
+      const marginMm = 8;
+      const usableWidthMm = pageWidthMm - marginMm * 2;
+
+      // Escala imagem para caber na largura útil
+      const imgWidthMm = usableWidthMm;
+      const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+
+      // Se couber em uma página só
+      if (imgHeightMm <= pageHeightMm - marginMm * 2) {
+        pdf.addImage(imgData, "JPEG", marginMm, marginMm, imgWidthMm, imgHeightMm);
+      } else {
+        // Quebra a imagem em várias páginas.
+        // Usamos a mesma imagem e "movemos" o offset com um posicionamento negativo.
+        const totalPagesNeeded = Math.ceil(imgHeightMm / (pageHeightMm - marginMm * 2));
+        for (let i = 0; i < totalPagesNeeded; i++) {
+          if (i > 0) pdf.addPage();
+          const offsetMm = -(i * (pageHeightMm - marginMm * 2));
+          pdf.addImage(imgData, "JPEG", marginMm, marginMm + offsetMm, imgWidthMm, imgHeightMm);
+        }
+      }
+
+      const nomeArquivo = `Relatorio_${(dadosCliente.nome || "cliente").replace(/\s+/g, "_")}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      pdf.save(nomeArquivo);
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      alert("Erro ao gerar o PDF. Tente novamente.");
+    } finally {
+      setGerandoPdf(false);
+    }
   };
 
   // Função chamada quando o contrato é enviado pelo modal
@@ -3796,6 +3894,48 @@ function FormularioNovoContent() {
                 ]}
               />
 
+              {/* Detalhes financeiros do(s) cartão(ões) de crédito */}
+              <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="shrink-0 w-9 h-9 rounded-xl bg-[#3A8DFF]/15 border border-[#3A8DFF]/30 flex items-center justify-center text-[#3A8DFF]">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base md:text-lg font-semibold text-white">Detalhes do(s) cartão(ões) de crédito</h3>
+                    <p className="text-sm text-slate-400 mt-1">Valores totais consolidados de todos os cartões que você possui.</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: "limiteTotalCartoes", label: "Limite total do(s) cartão(ões) de crédito" },
+                    { key: "limiteDisponivelCartoes", label: "Limite total disponível do(s) cartão(ões) de crédito" },
+                    { key: "gastoMedioCartao", label: "Gasto médio no cartão de crédito" },
+                    { key: "valorParceladoFaturaAtual", label: "Valor total das parcelas na fatura atual (o que está parcelado)" },
+                  ].map((campo) => (
+                    <div key={campo.key}>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">{campo.label}</label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          value={
+                            pilarOtimizacao[campo.key as keyof typeof pilarOtimizacao]
+                              ? formatCurrency(pilarOtimizacao[campo.key as keyof typeof pilarOtimizacao] as string)
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const parsed = parseCurrency(e.target.value).toString();
+                            setPilarOtimizacao((prev) => ({ ...prev, [campo.key]: parsed }));
+                          }}
+                          className="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white"
+                          placeholder="R$ 0,00"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <PerguntaRadio
                 icon={Plane}
                 titulo="O mundo das milhas e benefícios"
@@ -3880,6 +4020,10 @@ function FormularioNovoContent() {
               </div>
             </div>
 
+            {/* Blocos Hábitos de Consumo, Cartões de Crédito e Outras Informações ocultos por decisão de escopo.
+                Os states permanecem preservados para snapshots antigos (habitosConsumo, cartoesCredito, outrasInfoOrcamento). */}
+            {false && (
+            <>
             {/* Hábitos de Consumo */}
             <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30 mb-6">
               <h3 className="text-lg font-semibold text-white mb-1">Hábitos de Consumo</h3>
@@ -4081,6 +4225,8 @@ function FormularioNovoContent() {
                 </div>
               </div>
             </div>
+            </>
+            )}
 
             {/* Renda */}
             <div className="bg-slate-800/30 rounded-2xl border border-slate-700/30 mb-6 overflow-hidden">
@@ -4475,8 +4621,58 @@ function FormularioNovoContent() {
               </div>
             </div>
 
-            {/* Investimentos e Proteção */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Proteção (nova seção independente, abaixo de Gastos Variáveis) */}
+            <div className="bg-slate-800/30 rounded-2xl border border-slate-700/30 mb-6 overflow-hidden">
+              <div className="p-4 flex items-center justify-between border-b border-slate-700/50">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-purple-400" />
+                  <h3 className="text-lg font-semibold text-white">Proteção</h3>
+                </div>
+              </div>
+              <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-900/30 text-sm text-slate-400">
+                <div className="col-span-1"></div>
+                <div className="col-span-7">Subcategoria</div>
+                <div className="col-span-4">Valor</div>
+              </div>
+              {[
+                { key: "seguroVida", label: "Seguro de Vida" },
+                { key: "seguroResidencial", label: "Seguro Residencial" },
+                { key: "seguroAutomotivo", label: "Seguro Automotivo" },
+                { key: "responsabilidadeCivil", label: "Seguro de Responsabilidade Civil" },
+              ].map((item) => (
+                <div key={item.key} className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-slate-700/30">
+                  <div className="col-span-1 flex justify-center">
+                    <div className="w-2 h-2 rounded-full bg-purple-400/60"></div>
+                  </div>
+                  <div className="col-span-7 text-slate-300 text-sm">{item.label}</div>
+                  <div className="col-span-4">
+                    <input
+                      type="text"
+                      value={
+                        protecaoDetalhada[item.key as keyof typeof protecaoDetalhada]
+                          ? formatCurrency(protecaoDetalhada[item.key as keyof typeof protecaoDetalhada])
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setProtecaoDetalhada((prev) => ({
+                          ...prev,
+                          [item.key]: parseCurrency(e.target.value).toString(),
+                        }))
+                      }
+                      className="px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white w-full text-sm"
+                      placeholder="R$ 0,00"
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="grid grid-cols-12 gap-2 px-4 py-4 bg-slate-900/50 items-center">
+                <div className="col-span-8 text-white font-medium">Total de Proteção</div>
+                <div className="col-span-4 text-red-400 font-medium">{formatCurrency(totalProtecao)}</div>
+              </div>
+            </div>
+
+            {/* Investimentos mensais */}
+            <div className="mb-6">
               <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30">
                 <label className="block text-sm font-medium text-slate-300 mb-3">
                   <TrendingUp className="w-4 h-4 inline-block mr-2 text-blue-400" />
@@ -4486,19 +4682,6 @@ function FormularioNovoContent() {
                   type="text"
                   value={investimentosMensais ? formatCurrency(investimentosMensais) : ""}
                   onChange={(e) => setInvestimentosMensais(parseCurrency(e.target.value).toString())}
-                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white"
-                  placeholder="R$ 0,00"
-                />
-              </div>
-              <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30">
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  <Shield className="w-4 h-4 inline-block mr-2 text-purple-400" />
-                  Proteção mensal (seguros)
-                </label>
-                <input
-                  type="text"
-                  value={protecaoMensal ? formatCurrency(protecaoMensal) : ""}
-                  onChange={(e) => setProtecaoMensal(parseCurrency(e.target.value).toString())}
                   className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white"
                   placeholder="R$ 0,00"
                 />
@@ -4527,6 +4710,12 @@ function FormularioNovoContent() {
                       style={{ width: `${percVariavel}%` }}
                     >
                       {Number(percVariavel) > 5 && `${percVariavel}%`}
+                    </div>
+                    <div 
+                      className="bg-purple-500 flex items-center justify-center text-xs font-medium text-white"
+                      style={{ width: `${percProtecao}%` }}
+                    >
+                      {Number(percProtecao) > 5 && `${percProtecao}%`}
                     </div>
                     <div 
                       className="bg-blue-500 flex items-center justify-center text-xs font-medium text-white"
@@ -4600,16 +4789,67 @@ function FormularioNovoContent() {
                     {formatCurrency(saldoFinal)}
                   </span>
                 </div>
-                <div className="flex justify-between mt-4 text-sm text-slate-400">
-                  <div>
-                    <span>Capacidade mínima de poupar informada</span>
-                    <span className="ml-2 text-white">{formatCurrency(capacidadeMinPouparMensal)}</span>
-                  </div>
-                  <div>
-                    <span>Capacidade máxima de poupar informada</span>
-                    <span className="ml-2 text-white">{formatCurrency(capacidadeMaxPouparMensal)}</span>
-                  </div>
+                <div className="flex items-center justify-between mt-4 text-sm">
+                  <span className="text-slate-400">Capacidade de Poupar (informada na Aba 6)</span>
+                  <span className="text-white font-medium">{formatCurrency(capacidadePoupar)}</span>
                 </div>
+              </div>
+
+              {/* Comparativo Saúde Financeira - Ideal vs Atual */}
+              <div id="comparativo-saude-financeira" className="mt-8 pt-6 border-t border-slate-700/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-[#3A8DFF]" />
+                  <h4 className="text-base font-semibold text-white">Comparativo de Saúde Financeira</h4>
+                </div>
+                <p className="text-xs text-slate-400 mb-5">Contraste entre o percentual atual do cliente e a métrica recomendada.</p>
+
+                <div className="space-y-4">
+                  {[
+                    { label: "Gastos Fixos", atual: atualFixo, ideal: idealFixo, cor: "bg-orange-500", corHex: "#f97316" },
+                    { label: "Gastos Variáveis", atual: atualVariavel, ideal: idealVariavel, cor: "bg-yellow-500", corHex: "#eab308" },
+                    { label: "Proteção", atual: atualProtecao, ideal: idealProtecao, cor: "bg-purple-500", corHex: "#a855f7" },
+                    { label: "Investimento", atual: atualInvestimento, ideal: idealInvestimento, cor: "bg-blue-500", corHex: "#3b82f6" },
+                  ].map((cat) => {
+                    const acima = cat.atual > cat.ideal;
+                    return (
+                      <div key={cat.label}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-slate-300 font-medium">{cat.label}</span>
+                            {acima ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-500/40">
+                                ⚠ Acima do recomendado
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                ✓ Dentro do recomendado
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            Atual <span className={`font-semibold ${acima ? "text-red-300" : "text-white"}`}>{cat.atual}%</span>
+                            <span className="mx-2 text-slate-600">|</span>
+                            Ideal <span className="font-semibold text-white">{cat.ideal}%</span>
+                          </div>
+                        </div>
+                        {/* Barra atual */}
+                        <div className="relative h-5 bg-slate-900/60 rounded-full overflow-hidden mb-1">
+                          <div
+                            className={`h-full ${cat.cor} transition-all`}
+                            style={{ width: `${Math.min(100, cat.atual)}%` }}
+                          />
+                          {/* Marcador do ideal */}
+                          <div
+                            className="absolute top-0 h-full w-0.5 bg-white/70"
+                            style={{ left: `${cat.ideal}%` }}
+                            title={`Ideal ${cat.ideal}%`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-4">A linha branca vertical em cada barra marca o percentual ideal recomendado.</p>
               </div>
             </div>
 
@@ -4628,7 +4868,7 @@ function FormularioNovoContent() {
                       <th className="text-left py-3 px-2">Renda Líquida</th>
                       <th className="text-left py-3 px-2">Gastos</th>
                       <th className="text-left py-3 px-2">Saldo</th>
-                      <th className="text-left py-3 px-2">Capacidade de poupança informada</th>
+                      <th className="text-left py-3 px-2">Capacidade de Poupar</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -4637,14 +4877,14 @@ function FormularioNovoContent() {
                       <td className="py-3 px-2 text-white">{formatCurrency(totalRendaLiquida)}</td>
                       <td className="py-3 px-2 text-red-400">{formatCurrency(totalGastos)}</td>
                       <td className="py-3 px-2 text-white">{formatCurrency(saldoFinal)}</td>
-                      <td className="py-3 px-2 text-white">{formatCurrency(capacidadeMinPouparMensal)} - {formatCurrency(capacidadeMaxPouparMensal)}</td>
+                      <td className="py-3 px-2 text-white">{formatCurrency(capacidadePoupar)}</td>
                     </tr>
                     <tr>
                       <td className="py-3 px-2 text-slate-300">Anual</td>
                       <td className="py-3 px-2 text-white">{formatCurrency(rendaLiquidaAnual)}</td>
                       <td className="py-3 px-2 text-red-400">{formatCurrency(gastosAnuais)}</td>
                       <td className="py-3 px-2 text-white">{formatCurrency(saldoAnual)}</td>
-                      <td className="py-3 px-2 text-white">{formatCurrency(capacidadeMinPouparAnual)} - {formatCurrency(capacidadeMaxPouparAnual)}</td>
+                      <td className="py-3 px-2 text-white">{formatCurrency(capacidadePouparAnual)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -4794,12 +5034,27 @@ function FormularioNovoContent() {
         {/* Step: Relatório Final */}
         {isRelatorioStep && (
           <div className="animate-fade-in max-w-5xl mx-auto">
+            <div id="relatorio-pdf-content">
             <RelatorioFinanceiro
               resultado={resultadoGeral}
               nomeCliente={dadosCliente.nome}
               dataEmissao={new Date().toLocaleDateString("pt-BR")}
               patrimonioLiquido={patrimonioLiquido}
+              fluxo={{
+                totalRendaLiquida,
+                totalGastosFixos,
+                totalGastosVariaveis,
+                totalProtecao,
+                totalInvestimentos,
+                saldoFinal,
+                capacidadePoupar,
+                percFixo: Number(percFixo),
+                percVariavel: Number(percVariavel),
+                percProtecao: Number(percProtecao),
+                percInvestimento: Number(percInvestimento),
+              }}
             />
+            </div>
 
             {/* Bloco de acoes */}
             <div className="mt-10 rounded-3xl border border-slate-700/50 bg-slate-800/40 p-6 md:p-8">
@@ -4815,6 +5070,14 @@ function FormularioNovoContent() {
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Voltar
+                </button>
+                <button
+                  onClick={gerarPdfRelatorio}
+                  disabled={gerandoPdf}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {gerandoPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {gerandoPdf ? "Gerando PDF..." : "Baixar Relatório em PDF"}
                 </button>
                 <button
                   onClick={finalizarFormulario}
@@ -5219,9 +5482,10 @@ function FormularioNovoContent() {
                         : "border-slate-700 hover:border-slate-600"
                     }`}
                   >
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-3 py-1 bg-[#3A8DFF] text-white text-xs font-semibold rounded-full">
-                        Recomendado
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-4 py-1.5 bg-gradient-to-r from-[#3A8DFF] to-[#5DA9FF] text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-lg shadow-[#3A8DFF]/30 border border-white/20">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        O mais indicado
                       </span>
                     </div>
                     <h3 className="text-2xl font-bold text-[#3A8DFF] mb-4">Premium</h3>
@@ -5343,7 +5607,7 @@ function FormularioNovoContent() {
                   <p className="text-slate-400 mt-1">Proposta com condição especial à vista</p>
                 </div>
                 <button
-                  onClick={() => { setShowDesconto(false); setCupomDesconto(""); setPercentualDesconto(40); }}
+                  onClick={() => { setShowDesconto(false); setCupomDesconto(""); setPercentualDesconto(DESCONTO_AUTOMATICO_PADRAO); }}
                   className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5 text-slate-400" />
@@ -5379,14 +5643,13 @@ function FormularioNovoContent() {
                   <button
                     onClick={() => {
                       const codigo = cupomDesconto.toLowerCase().trim();
-                      if (codigo === "45off") setPercentualDesconto(45);
-                      else if (codigo === "50off") setPercentualDesconto(50);
-                      else if (codigo === "55off") setPercentualDesconto(55);
-                      else if (codigo === "40off") setPercentualDesconto(40);
-                      else {
+                      const percentual = CUPONS_DESCONTO[codigo];
+                      if (percentual === undefined) {
                         alert("Cupom inválido");
                         return;
                       }
+                      // Substitui o percentual vigente pelo do cupom (não soma)
+                      setPercentualDesconto(percentual);
                       setCupomDesconto("");
                     }}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white text-sm font-medium transition-colors whitespace-nowrap"

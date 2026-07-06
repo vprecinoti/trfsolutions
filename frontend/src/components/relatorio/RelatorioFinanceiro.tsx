@@ -36,6 +36,20 @@ const pilarIcone: Record<PilarId, LucideIcon> = {
   fluxo: PieChart,
 };
 
+interface FluxoResumo {
+  totalRendaLiquida: number;
+  totalGastosFixos: number;
+  totalGastosVariaveis: number;
+  totalProtecao: number;
+  totalInvestimentos: number;
+  saldoFinal: number;
+  capacidadePoupar: number;
+  percFixo: number;
+  percVariavel: number;
+  percProtecao: number;
+  percInvestimento: number;
+}
+
 interface RelatorioFinanceiroProps {
   resultado: ResultadoGeral;
   nomeCliente?: string;
@@ -44,6 +58,8 @@ interface RelatorioFinanceiroProps {
   // Campos opcionais para enriquecer o contexto do cliente no header
   rendaPassivaDesejada?: string | number;
   patrimonioLiquido?: number;
+  // Resumo do Fluxo de Caixa (Aba 7) - incluído no PDF
+  fluxo?: FluxoResumo;
 }
 
 const moedaBR = (v: number) =>
@@ -55,6 +71,7 @@ export function RelatorioFinanceiro({
   consultorNome,
   dataEmissao,
   patrimonioLiquido,
+  fluxo,
 }: RelatorioFinanceiroProps) {
   const corGeral = faixaCores[resultado.faixa];
   const diag = feedbackDiagnosticoGeral(resultado.faixa);
@@ -282,6 +299,113 @@ export function RelatorioFinanceiro({
           );
         })}
       </section>
+
+      {/* ============================================ */}
+      {/* FLUXO DE CAIXA - RESUMO + COMPARATIVO IDEAL   */}
+      {/* ============================================ */}
+      {fluxo && (
+        <section className="rounded-3xl border border-slate-700/50 bg-slate-800/40 p-6 md:p-8">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-[#3A8DFF]/15 border border-[#3A8DFF]/40 flex items-center justify-center">
+              <PieChart className="w-5 h-5 text-[#3A8DFF]" />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-white">Fluxo de Caixa</h2>
+              <p className="text-sm text-white/60">Distribuição atual do orçamento e contraste com o recomendado.</p>
+            </div>
+          </div>
+
+          {/* Barra de distribuição atual */}
+          <div className="mb-6">
+            <p className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-2">Distribuição atual</p>
+            <div className="flex h-8 rounded-lg overflow-hidden border border-white/10">
+              <div className="bg-orange-500 flex items-center justify-center text-xs font-medium text-white" style={{ width: `${fluxo.percFixo}%` }}>
+                {fluxo.percFixo > 5 && `${fluxo.percFixo}%`}
+              </div>
+              <div className="bg-yellow-500 flex items-center justify-center text-xs font-medium text-slate-900" style={{ width: `${fluxo.percVariavel}%` }}>
+                {fluxo.percVariavel > 5 && `${fluxo.percVariavel}%`}
+              </div>
+              <div className="bg-purple-500 flex items-center justify-center text-xs font-medium text-white" style={{ width: `${fluxo.percProtecao}%` }}>
+                {fluxo.percProtecao > 5 && `${fluxo.percProtecao}%`}
+              </div>
+              <div className="bg-blue-500 flex items-center justify-center text-xs font-medium text-white" style={{ width: `${fluxo.percInvestimento}%` }}>
+                {fluxo.percInvestimento > 5 && `${fluxo.percInvestimento}%`}
+              </div>
+            </div>
+          </div>
+
+          {/* Números do fluxo */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            {[
+              { label: "Renda Líquida", valor: fluxo.totalRendaLiquida, cor: "text-[#3A8DFF]" },
+              { label: "Gastos Fixos", valor: fluxo.totalGastosFixos, cor: "text-orange-400", neg: true },
+              { label: "Gastos Variáveis", valor: fluxo.totalGastosVariaveis, cor: "text-yellow-400", neg: true },
+              { label: "Proteção", valor: fluxo.totalProtecao, cor: "text-purple-400", neg: true },
+              { label: "Investimentos", valor: fluxo.totalInvestimentos, cor: "text-blue-400", neg: true },
+              { label: "Saldo Final", valor: fluxo.saldoFinal, cor: fluxo.saldoFinal >= 0 ? "text-emerald-400" : "text-red-400" },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mb-1">{item.label}</p>
+                <p className={`text-sm font-bold ${item.cor}`}>
+                  {item.neg && item.valor > 0 ? "-" : ""}{moedaBR(item.valor)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-[#3A8DFF]/30 bg-[#3A8DFF]/5 p-4 mb-6 flex items-center justify-between">
+            <span className="text-sm text-white/80">Capacidade de Poupar (informada)</span>
+            <span className="text-lg font-bold text-[#3A8DFF]">{moedaBR(fluxo.capacidadePoupar)}</span>
+          </div>
+
+          {/* Comparativo Ideal vs Atual */}
+          <div className="pt-5 border-t border-white/10">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="w-5 h-5 text-[#3A8DFF]" />
+              <h3 className="text-base font-semibold text-white">Saúde Financeira: Atual vs Ideal</h3>
+            </div>
+            <p className="text-xs text-white/50 mb-5">Contraste com a métrica recomendada. A linha branca em cada barra marca o percentual ideal.</p>
+
+            <div className="space-y-4">
+              {[
+                { label: "Gastos Fixos", atual: fluxo.percFixo, ideal: 50, cor: "bg-orange-500" },
+                { label: "Gastos Variáveis", atual: fluxo.percVariavel, ideal: 25, cor: "bg-yellow-500" },
+                { label: "Proteção", atual: fluxo.percProtecao, ideal: 10, cor: "bg-purple-500" },
+                { label: "Investimento", atual: fluxo.percInvestimento, ideal: 15, cor: "bg-blue-500" },
+              ].map((cat) => {
+                const acima = cat.atual > cat.ideal;
+                return (
+                  <div key={cat.label}>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-white/80 font-medium">{cat.label}</span>
+                        {acima ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-500/40">
+                            Acima do recomendado
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            Dentro do recomendado
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-white/60">
+                        Atual <span className={`font-semibold ${acima ? "text-red-300" : "text-white"}`}>{cat.atual}%</span>
+                        <span className="mx-2 text-white/30">|</span>
+                        Ideal <span className="font-semibold text-white">{cat.ideal}%</span>
+                      </div>
+                    </div>
+                    <div className="relative h-5 bg-slate-900/60 rounded-full overflow-hidden">
+                      <div className={`h-full ${cat.cor} transition-all`} style={{ width: `${Math.min(100, cat.atual)}%` }} />
+                      <div className="absolute top-0 h-full w-0.5 bg-white/80" style={{ left: `${cat.ideal}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ============================================ */}
       {/* PROPOSTA DE CONSULTORIA                      */}
