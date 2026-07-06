@@ -1673,10 +1673,11 @@ function FormularioNovoContent() {
   // À vista: 3% da renda bruta anual (precoBase já é isso)
   const precoAvistaComDesconto = cupomAplicado !== null ? cupomAplicado : precoBase;
 
-  // Proposta comercial: 30% da renda bruta MENSAL (regra fixa acordada)
+  // Proposta comercial: preço total = 39% da renda bruta MENSAL, parcelado em 12x (regra fixa acordada)
+  // Ex: renda bruta mensal R$ 15.000 -> total R$ 5.850,00 -> 12x de R$ 487,50
   const numParcelas = 12;
-  const valorParcela = Math.round(totalRendaBruta * 0.30 * 100) / 100;
-  const precoParcelado = valorParcela * numParcelas;
+  const precoParcelado = Math.round(totalRendaBruta * 0.39 * 100) / 100;
+  const valorParcela = Math.round((precoParcelado / numParcelas) * 100) / 100;
 
   // Preços dos planos de acompanhamento
   const precosAcompanhamento = {
