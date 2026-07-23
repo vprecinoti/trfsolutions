@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getLead, deleteLead, updateLeadStatus, Lead } from "@/lib/api/leads";
+import { createFormulario } from "@/lib/api/formularios";
 
 export default function ClienteDetalhesPage() {
   const params = useParams();
@@ -31,6 +32,24 @@ export default function ClienteDetalhesPage() {
   const [showContratoModal, setShowContratoModal] = useState(false);
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [criandoFormulario, setCriandoFormulario] = useState(false);
+
+  const handleCriarFormulario = async () => {
+    if (!lead || criandoFormulario) return;
+    try {
+      setCriandoFormulario(true);
+      const novo = await createFormulario({
+        clienteNome: lead.nome,
+        clienteEmail: lead.email,
+        clienteTelefone: lead.telefone || undefined,
+      });
+      router.push(`/dashboard/formulario/novo?id=${novo.id}`);
+    } catch (err) {
+      console.error("Erro ao criar formulário:", err);
+      alert("Erro ao criar o formulário. Tente novamente.");
+      setCriandoFormulario(false);
+    }
+  };
 
   useEffect(() => {
     if (clienteId) {
@@ -854,13 +873,18 @@ export default function ClienteDetalhesPage() {
                   </div>
                   <h3 className="text-lg font-medium text-white mb-2">Nenhum formulário preenchido</h3>
                   <p className="text-white/50 mb-6">Este cliente ainda não possui um formulário</p>
-                  <Link
-                    href={`/dashboard/formulario/novo?clienteId=${clienteId}`}
-                    className="inline-flex items-center gap-2 px-5 py-3 bg-[#3A8DFF] text-white rounded-xl font-medium hover:bg-[#3A8DFF]/80 transition-colors"
+                  <button
+                    onClick={handleCriarFormulario}
+                    disabled={criandoFormulario}
+                    className="inline-flex items-center gap-2 px-5 py-3 bg-[#3A8DFF] text-white rounded-xl font-medium hover:bg-[#3A8DFF]/80 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Plus className="w-4 h-4" />
-                    Criar Formulário
-                  </Link>
+                    {criandoFormulario ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    {criandoFormulario ? "Criando..." : "Criar Formulário"}
+                  </button>
                 </div>
               )}
             </div>

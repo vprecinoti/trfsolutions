@@ -8,6 +8,7 @@ import {
   getFormulario, 
   updateFormulario, 
   completeFormulario,
+  createFormulario,
   Formulario 
 } from "@/lib/api/formularios";
 import { logFrontendError } from "@/lib/api/snapshots";
@@ -16,8 +17,13 @@ import {
   markBackupSynced,
   getUnsyncedBackup,
   clearBackupsForForm,
+  savePendingBackup,
+  getPendingBackup,
+  clearPendingBackup,
+  migratePendingBackup,
   type LocalBackup,
 } from "@/lib/formularioBackup";
+import { getLead } from "@/lib/api/leads";
 import { SaveStatusToast } from "@/components/forms/SaveStatusToast";
 import { BackupRecoveryModal } from "@/components/forms/BackupRecoveryModal";
 import { ContratoModal } from "@/components/contract/ContratoModal";
@@ -538,7 +544,10 @@ const CUPONS_DESCONTO: Record<string, number> = {
 function FormularioNovoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const formularioId = searchParams.get("id");
+  const idFromUrl = searchParams.get("id");
+  const clienteIdFromUrl = searchParams.get("clienteId");
+  const [formularioId, setFormularioId] = useState<string | null>(idFromUrl);
+  const [autoCreating, setAutoCreating] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -928,14 +937,67 @@ function FormularioNovoContent() {
   const DESCONTO_AUTOMATICO_PADRAO = 25;
   const [percentualDesconto, setPercentualDesconto] = useState(DESCONTO_AUTOMATICO_PADRAO);
 
-  // Carregar formulário existente
+  // Carregar formulário existente OU criar automaticamente a partir de ?clienteId=
   useEffect(() => {
     if (formularioId) {
       loadFormulario();
-    } else {
-      setLoading(false);
+      return;
     }
-  }, [formularioId]);
+
+    // Fallback de segurança: se veio ?clienteId= mas sem ?id=, cria o formulário
+    // agora para nunca chegar na tela sem um formularioId válido.
+    if (clienteIdFromUrl && !autoCreating) {
+      autoCreateFromCliente(clienteIdFromUrl);
+      return;
+    }
+
+    setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formularioId, clienteIdFromUrl]);
+
+  const autoCreateFromCliente = async (clienteId: string) => {
+    try {
+      setAutoCreating(true);
+      setLoading(true);
+      // Busca dados do cliente para pré-preencher o formulário
+      let prefill: { clienteNome?: string; clienteEmail?: string; clienteTelefone?: string } = {};
+      try {
+        const lead = await getLead(clienteId);
+        prefill = {
+          clienteNome: lead.nome,
+          clienteEmail: lead.email,
+          clienteTelefone: lead.telefone || undefined,
+        };
+      } catch (leadErr) {
+        // Se não conseguir carregar o cliente, cria o formulário vazio mesmo assim
+        console.warn("Não foi possível carregar o cliente para pré-preencher:", leadErr);
+      }
+
+      const novo = await createFormulario(prefill);
+      setFormularioId(novo.id);
+
+      // Migra qualquer backup pendente (dados digitados antes do formulário existir)
+      // para o formulário recém-criado.
+      const migrated = migratePendingBackup(novo.id);
+      if (migrated) {
+        console.info("Backup pendente migrado para o formulário", novo.id);
+      }
+
+      // Substitui a URL para refletir o id real (sem recarregar).
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("clienteId");
+        url.searchParams.set("id", novo.id);
+        router.replace(url.pathname + url.search);
+      }
+    } catch (err) {
+      console.error("Falha ao criar formulário a partir do cliente:", err);
+      alert("Não foi possível criar o formulário. Tente novamente pela página do cliente.");
+      setLoading(false);
+    } finally {
+      setAutoCreating(false);
+    }
+  };
 
   const loadFormulario = async () => {
     try {
@@ -1117,9 +1179,17 @@ function FormularioNovoContent() {
   // CAMADA 2: backend PUT (com retry exponencial)
   // CAMADA 3: error log no servidor se tudo falhar
   const autoSave = useCallback(async (retryCount = 0) => {
-    if (!formularioId) return;
-
     const payload = buildPayload();
+
+    // REDE DE SEGURANÇA: se o formularioId ainda não existe (ex: criação
+    // do formulário no backend está em curso, ou o usuário chegou aqui
+    // por uma rota antiga), grava um backup PENDENTE no localStorage.
+    // Depois que o formularioId aparecer, `migratePendingBackup` transfere
+    // esses dados para o formulário definitivo.
+    if (!formularioId) {
+      savePendingBackup(payload, clienteIdFromUrl || undefined);
+      return;
+    }
 
     // CAMADA 1: SEMPRE salvar localmente PRIMEIRO (síncrono, sem rede)
     // Isso garante que mesmo se o backend cair, os dados ficam no navegador
@@ -1163,11 +1233,13 @@ function FormularioNovoContent() {
     } finally {
       setSaving(false);
     }
-  }, [formularioId, buildPayload]);
+  }, [formularioId, buildPayload, clienteIdFromUrl]);
 
   // Auto-save com debounce
+  // Nota: rodamos mesmo sem formularioId — nesse caso o autoSave grava
+  // um backup pendente local (rede de segurança extra).
   useEffect(() => {
-    if (!formularioId || loading) return;
+    if (loading) return;
     
     const timer = setTimeout(() => {
       autoSave();
@@ -1179,11 +1251,19 @@ function FormularioNovoContent() {
   // BACKUP CAMADA 2: Beacon API - garante save ao fechar/navegar para fora da página
   // sendBeacon é especial: o navegador ENVIA mesmo durante o unload da página
   useEffect(() => {
-    if (!formularioId || loading) return;
+    if (loading) return;
 
     const handleBeforeUnload = () => {
       try {
         const payload = buildPayload();
+
+        // Se ainda não temos formularioId, salvamos apenas como backup pendente
+        // no localStorage — sem tentar beacon.
+        if (!formularioId) {
+          savePendingBackup(payload, clienteIdFromUrl || undefined);
+          return;
+        }
+
         // SEMPRE salvar localmente antes de tentar beacon
         saveLocalBackup(formularioId, payload);
 
@@ -1219,7 +1299,7 @@ function FormularioNovoContent() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pagehide", handleBeforeUnload);
     };
-  }, [formularioId, loading, buildPayload]);
+  }, [formularioId, loading, buildPayload, clienteIdFromUrl]);
 
   // BACKUP CAMADA 3: Detectar backup local não sincronizado ao abrir formulário
   // Se o usuário fechou a aba antes do save terminar, ainda temos os dados no localStorage

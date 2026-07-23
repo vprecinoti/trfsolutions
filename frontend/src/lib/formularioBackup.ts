@@ -188,3 +188,65 @@ export function clearBackupsForForm(formularioId: string): void {
   index.ids = index.ids.filter((k) => !formKeys.includes(k));
   setIndex(index);
 }
+
+// ============================================================
+// BACKUP PENDENTE (sem formularioId ainda)
+// ============================================================
+// Rede de segurança extra: se por algum motivo o usuário chegar
+// na tela do formulário sem um formularioId (bug de rota, race
+// condition, criação do formulário no backend falhou etc.), ainda
+// assim conseguimos salvar os dados digitados no localStorage e
+// depois migrá-los para o formulário definitivo assim que o id
+// existir.
+
+const PENDING_BACKUP_KEY = "formulario_backup_pending_v1";
+
+export interface PendingBackup {
+  timestamp: number;
+  isoTime: string;
+  clienteId?: string; // se o usuário veio a partir de um cliente
+  data: any;
+}
+
+/**
+ * Salva um backup pendente (ainda não tem formularioId associado).
+ * Sobrescreve o anterior — mantemos apenas o mais recente.
+ */
+export function savePendingBackup(data: any, clienteId?: string): void {
+  if (typeof window === "undefined") return;
+  const timestamp = Date.now();
+  const backup: PendingBackup = {
+    timestamp,
+    isoTime: new Date(timestamp).toISOString(),
+    clienteId,
+    data,
+  };
+  safeSet(PENDING_BACKUP_KEY, backup);
+}
+
+export function getPendingBackup(): PendingBackup | null {
+  if (typeof window === "undefined") return null;
+  return safeGet<PendingBackup>(PENDING_BACKUP_KEY);
+}
+
+export function clearPendingBackup(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(PENDING_BACKUP_KEY);
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Migra o backup pendente para o formulário definitivo assim que o
+ * formularioId estiver disponível. Depois de migrar, o pendente é
+ * removido.
+ */
+export function migratePendingBackup(formularioId: string): PendingBackup | null {
+  const pending = getPendingBackup();
+  if (!pending) return null;
+  saveLocalBackup(formularioId, pending.data);
+  clearPendingBackup();
+  return pending;
+}
